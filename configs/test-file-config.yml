@@ -1,0 +1,19 @@
+Config:
+    #API token string, required
+    token: x12345
+    #submission ID, required
+    submission: 12345
+    #upload type,  valid value in [“file”, “metadata”], required
+    type: file
+    #folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
+    data: /mydir
+    #path to manifest file, conditional required when type = “file”
+    manifest: /mydir/myManifest.yml
+    #file name header name in the manifest file, default is file_name
+    name-field:
+    #file size header name in the manifest file, default is file_size
+    size-field:
+    #file md5 header name in the manifest file, default is md5sum
+    md5-field:
+
+

@@ -141,3 +141,6 @@ backup/
 
 #bento frmework
 **/bento/
+
+#config files for testing
+config/test*

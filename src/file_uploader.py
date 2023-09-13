@@ -8,12 +8,11 @@ from collections import deque
 from bento.common.sqs import Queue, VisibilityExtender
 from bento.common.utils import get_logger, get_log_file, get_uuid, LOG_PREFIX, UUID, get_time_stamp, removeTrailingSlash, load_plugin
 from copier import Copier
-from file_copier_config import MASTER_MODE, SLAVE_MODE, SOLO_MODE, Config
+from upload_config import Config
 from bento.common.s3 import upload_log_file
 
 if LOG_PREFIX not in os.environ:
     os.environ[LOG_PREFIX] = 'File_Loader'
-
 
 # This script copies (stream in memory) files from an URL to specified S3 bucket
 #
@@ -71,19 +70,6 @@ class FileLoader:
         :param count: number of files to process
 
         """
-        if mode not in Config.valid_modes:
-            raise ValueError(f'Invalid loading mode: {mode}')
-        self.mode = mode
-
-        if mode != SOLO_MODE:
-            if not job_queue:
-                raise ValueError(f'Job queue name is required in {self.mode} mode!')
-            self.job_queue_name = job_queue
-            self.job_queue = Queue(job_queue)
-            if not result_queue:
-                raise ValueError(f'Result queue name is required in {self.mode} mode!')
-            self.result_queue_name = result_queue
-            self.result_queue = Queue(result_queue)
 
         if self.mode != SLAVE_MODE:
             if not bucket:
@@ -233,14 +219,12 @@ class FileLoader:
         return files
 
     # Use this method in solo mode
-    def copy_all(self):
+    def upload(self):
         """
           Read file information from pre-manifest and copy them all to destination bucket
           :return:
         """
-        if self.mode != SOLO_MODE:
-            self.log.critical(f'Function only works in {SOLO_MODE} mode!')
-            return False
+
         self.copier = Copier(self.bucket_name, self.prefix, self.adapter)
 
         file_queue = deque(self._read_pre_manifest())
@@ -309,217 +293,14 @@ class FileLoader:
 
     def _deal_with_failed_file(self, job, queue):
         if job[self.TTL] > 0:
-            self.log.error(f'Line: {job[self.LINE]} - Copying file FAILED! Retry left: {job[self.TTL]}')
+            self.log.error(f'Line: {job[self.LINE]} - Uploading file FAILED! Retry left: {job[self.TTL]}')
             queue.append(job)
         else:
-            self.log.critical(f'Copying file failure exceeded maximum retry times, abort!')
+            self.log.critical(f'Uploading file failure exceeded maximum retry times, abort!')
             self.files_failed += 1
 
-    # Use this method in master mode
-    def process_all(self):
-        """
-        Read file information from pre-manifest and push jobs into job queue
-        Listen on result queue for loading result
-        :return:
-        """
-        if self.mode != MASTER_MODE:
-            self.log.critical(f'Function only works in {MASTER_MODE} mode!')
-            return False
-
-        try:
-            files = self._read_pre_manifest()
-            count = 0
-            for job in files:
-                if self.dryrun:
-                    self.log.info(f'Dry run mode, jobs will be sent to queue but files won\'t be copied!')
-                else:
-                    self.log.info(f'Line {job[self.LINE]}: file info sent to queue: {self.job_queue_name}')
-                self.job_queue.sendMsgToQueue(job, f'{job[self.LINE]}_{get_time_stamp()}')
-                count += 1
-            self.log.info(f'Files sent to queue: {count}')
-            self.read_result(count)
-
-        except Exception as e:
-            self.log.debug(e)
-            self.log.critical(f'Process files FAILED! Check debug log for detailed information.')
-
-    # read result from result queue - master mode
-    def read_result(self, num_files):
-        if self.mode != MASTER_MODE:
-            self.log.critical(f'Function only works in {MASTER_MODE} mode!')
-            return False
-        indexd_manifest = self.get_indexd_manifest_name(self.pre_manifest)
-        neo4j_manifest = self.get_neo4j_manifest_name(self.pre_manifest)
-
-        with open(indexd_manifest, 'w', newline='\n') as indexd_f:
-            indexd_writer = csv.DictWriter(indexd_f, delimiter='\t', fieldnames=self.MANIFEST_FIELDS)
-            indexd_writer.writeheader()
-            with open(neo4j_manifest, 'w', newline='\n') as neo4j_f:
-                fieldnames = self.adapter.filter_fields(self.field_names)
-                fieldnames += self.DATA_FIELDS
-                neo4j_writer = csv.DictWriter(neo4j_f, delimiter='\t', fieldnames=fieldnames)
-                neo4j_writer.writeheader()
-
-                count = 0
-                while count < num_files:
-                    self.log.info(f'Waiting for results on queue: {self.result_queue_name}, \
-                    {num_files - count} files pending')
-                    for msg in self.result_queue.receiveMsgs(self.VISIBILITY_TIMEOUT):
-                        self.log.info(f'Received a result!')
-                        extender = None
-                        try:
-                            result = json.loads(msg.body)
-                            # Make sure result is in correct format
-                            if (
-                                    result and
-                                    Copier.STATUS in result and
-                                    Copier.MD5 in result and
-                                    Copier.NAME in result and
-                                    Copier.KEY in result and
-                                    Copier.FIELDS in result
-                            ):
-                                extender = VisibilityExtender(msg, self.VISIBILITY_TIMEOUT)
-
-                                if result[Copier.STATUS]:
-                                    indexd_record = {}
-                                    self.populate_indexd_record(indexd_record, result)
-                                    indexd_writer.writerow(indexd_record)
-                                    neo4j_record = result[Copier.FIELDS]
-                                    self.populate_neo4j_record(neo4j_record, result)
-                                    neo4j_writer.writerow(neo4j_record)
-                                else:
-                                    self.log.error(f'Copy file {result[Copier.NAME]} FAILED!')
-                                    self.files_failed += 1
-
-                                extender.stop()
-                                extender = None
-                                count += 1
-                                self.log.info(f'{count} of {num_files} files finished!')
-                                msg.delete()
-                            else:
-                                self.log.error(f'Wrong message type!')
-                                self.log.error(result)
-                                msg.delete()
-
-                        except Exception as e:
-                            self.log.debug(e)
-                            self.log.critical(
-                                f'Something wrong happened while processing file! Check debug log for details.')
-
-                        finally:
-                            if extender:
-                                extender.stop()
-
-        self.log.info(f'All {num_files} files finished!')
-
-    # Use this method in slave mode
-    def start_work(self):
-        if self.mode != SLAVE_MODE:
-            self.log.critical(f'Function only works in {SLAVE_MODE} mode!')
-            return False
-
-        while True:
-            try:
-                self.log.info(f'Waiting for jobs on queue: {self.job_queue_name}, '
-                              f'{self.files_processed} files have been processed so far')
-                for msg in self.job_queue.receiveMsgs(self.VISIBILITY_TIMEOUT):
-                    self.log.info(f'Received a job!')
-                    extender = None
-                    data = None
-                    try:
-                        data = json.loads(msg.body)
-                        self.log.debug(data)
-                        # Make sure job is in correct format
-                        if (
-                                self.ADAPTER_CONF in data and
-                                self.BUCKET in data and
-                                self.INFO in data and
-                                self.TTL in data and
-                                self.OVERWRITE in data and
-                                self.PREFIX in data and
-                                self.DRY_RUN in data and
-                                self.VERIFY_MD5 in data
-                        ):
-                            extender = VisibilityExtender(msg, self.VISIBILITY_TIMEOUT)
-                            dryrun = data[self.DRY_RUN]
-                            verify_md5 = data[self.VERIFY_MD5]
-
-                            adapter_config = data[self.ADAPTER_CONF]
-                            bucket_name = data[self.BUCKET]
-                            prefix = data[self.PREFIX]
-                            if self.adapter_config != adapter_config:
-                                self.adapter_config = adapter_config
-                                self._init_adapter(adapter_module=adapter_config[self.ADAPTER_MODULE],
-                                                   adapter_class=adapter_config[self.ADAPTER_CLASS],
-                                                   params=adapter_config[self.ADAPTER_PARAMS]
-                                                   )
-                                self.bucket_name = bucket_name
-                                self.prefix = prefix
-                                self.copier = Copier(bucket_name, prefix, self.adapter)
-
-                            if bucket_name != self.bucket_name:
-                                self.bucket_name = bucket_name
-                                self.copier.set_bucket(bucket_name)
-
-                            if prefix != self.prefix:
-                                self.prefix = prefix
-                                self.copier.set_prefix(prefix)
-
-                            result = self.copier.copy_file(data[self.INFO], data[self.OVERWRITE], dryrun or self.dryrun,
-                                                           verify_md5)
-
-                            if result[Copier.STATUS]:
-                                self.result_queue.sendMsgToQueue(result, f'{result[Copier.NAME]}_{get_time_stamp()}')
-                            else:
-                                self._deal_with_failed_file_sqs(data)
-
-                            extender.stop()
-                            extender = None
-                            self.files_processed += 1
-                            self.log.info(f'Copying file finished!')
-                            msg.delete()
-                        else:
-                            self.log.error(f'Wrong message type!')
-                            self.log.error(data)
-                            msg.delete()
-
-                    except Exception as e:
-                        self.log.debug(e)
-                        self.log.critical(
-                            f'Something wrong happened while processing file! Check debug log for details.')
-                        if data:
-                            self._deal_with_failed_file_sqs(data)
-
-                    finally:
-                        if extender:
-                            extender.stop()
-
-            except KeyboardInterrupt:
-                self.log.info('Good bye!')
-                return
-
     def _deal_with_failed_file_sqs(self, job):
-        self.log.info(f'Copy file FAILED, {job[self.TTL] - 1} retry left!')
+        self.log.info(f'Upload file FAILED, {job[self.TTL] - 1} retry left!')
         job[self.TTL] -= 1
         self.job_queue.sendMsgToQueue(job, f'{job[self.LINE]}_{job[self.TTL]}')
-
-    def run(self):
-        if self.mode == SOLO_MODE:
-            self.copy_all()
-        elif self.mode == MASTER_MODE:
-            self.process_all()
-        elif self.mode == SLAVE_MODE:
-            self.start_work()
-
-
-def main():
-    config = Config()
-    if not config.validate():
-        return
-
-    loader = FileLoader(**config.data)
-    loader.run()
-
-
-if __name__ == '__main__':
-    main()
+       

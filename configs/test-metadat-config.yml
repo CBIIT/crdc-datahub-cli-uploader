@@ -1,0 +1,12 @@
+Config:
+    #API token string, required
+    token: 
+    #submission ID, required
+    submission: 
+    #upload type,  valid value in [“file”, “metadata”], required
+    type: metadata
+    #folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
+    data: 
+    #uploading intention, valid value in [“New”, “Update”, “Delete”],
+    intention: 
+   
