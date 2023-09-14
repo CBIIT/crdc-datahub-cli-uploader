@@ -16,7 +16,7 @@ For metadata: validate data folder contains TSV or TXT files
 Compose a list of files to be updated and their sizes (metadata or files)
 """
 
-class File_Validator:
+class FileValidator:
     
     def __init__(self, configs):
         self.configs = configs

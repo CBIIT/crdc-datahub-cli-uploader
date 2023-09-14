@@ -7,11 +7,12 @@ import sys
 from bento.common.utils import get_logger, get_log_file, get_uuid, LOG_PREFIX, UUID, get_time_stamp, removeTrailingSlash, load_plugin
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES
 from upload_config import Config, UPLOAD_HELP
+from file_validator import FileValidator
 from file_uploader import FileLoader
 from data_loader import DataLoader
 
 if LOG_PREFIX not in os.environ:
-    os.environ[LOG_PREFIX] = 'Controller'
+    os.environ[LOG_PREFIX] = 'Uploader Main'
 
 log = get_logger('FileLoader')
 # public function to received the args and dispitch to different modules for different uploading types, file or metadata
@@ -26,16 +27,16 @@ def controller():
     config = Config()
     if not config.validate():
         log.error("Failed to upload files: missing required valid parameter(s)!")
+        print("Failed to upload files: missing required valid parameter(s)!  Please check log file in tmp folder for details.")
         return
 
-    #step 2: check upload type and validate file or metadata
+    #step 2: validate file or metadata
     configs = config.data
-    if configs.get(UPLOAD_TYPE) == UPLOAD_TYPES[0]: #file
-        #validate files in the given local folder.
-        result = False;
-    elif config.data.get(UPLOAD_TYPE) == UPLOAD_TYPES[1]: #metadata
-        #validate matedata.
-        result = False;
+    validator = FileValidator(configs)
+    if not validator.validate():
+        log.error("Failed to upload files: found invalid file(s)!")
+        print("Failed to upload files: found invalid file(s)!  Please check log file in tmp folder for details.")
+        return
 
     #step 3: get aws sts temp credential for uploading files to s3 bucket.
 
