@@ -1,7 +1,8 @@
 import argparse
 import os
 import yaml
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
+    TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD
 from bento.common.utils import get_logger
 
 
@@ -78,56 +79,78 @@ class Config():
         if len(self.data)== 0:
             return False
         
-        token = self.data.get('token')
+        token = self.data.get(TOKEN)
         if token is None:
             self.log.critical(f'token is required!')
             return False
+        else:
+            self.data[TOKEN]  = token.strip()
         
-        submissionId = self.data.get('submission')
+        submissionId = self.data.get(SUBMISSION_ID)
         if submissionId is None:
             self.log.critical(f'submission Id is required!')
             return False
+        else:
+            self.data[SUBMISSION_ID]  = submissionId.strip()
         
-        type = self.data.get('type')
+        type = self.data.get(UPLOAD_TYPE)
         if type is None:
             self.log.critical(f'upload type is required!')
             return False
-        elif type not in UPLOAD_TYPES:
+        elif type.strip() not in UPLOAD_TYPES:
             self.log.critical(f'{type} is not valid uploading type!')
             return False
         else:
+            self.data[UPLOAD_TYPE] = type.strip()
             if type == UPLOAD_TYPES[0]: #file
                 #check manifest
-                manifest = self.data.get('manifest')
+                manifest = self.data.get(PRE_MANIFEST)
                 if manifest is None:
                     self.log.critical(f'manifest file path is required for file uploading!')
                     return False
                 
+                self.data[PRE_MANIFEST]  = manifest.strip()
                 #check header names in manifest file
-                file_name_hearder= self.data.get('name-field')
+                file_name_hearder= self.data.get(FILE_NAME_FIELD)
                 if file_name_hearder is None:
-                    self.data['name-field'] = FILE_NAME_DEFAULT
-                file_size_hearder = self.data.get('size-field')
+                    self.data[FILE_NAME_FIELD] = FILE_NAME_DEFAULT
+                else:
+                    self.data[FILE_NAME_FIELD]  = file_name_hearder.strip()
+
+                file_size_hearder = self.data.get(FILE_SIZE_FIELD)
                 if file_size_hearder is None:
-                    self.data['size-field'] = FILE_SIZE_DEFAULT
-                md5_header = self.data.get('md5-field')
+                    self.data[FILE_SIZE_FIELD] = FILE_SIZE_DEFAULT
+                else:
+                    self.data[FILE_SIZE_FIELD]  = file_size_hearder.strip()
+
+                md5_header = self.data.get(FILE_MD5_FIELD)
                 if  md5_header is None:
-                    self.data['md5-field'] = MD5_DEFAULT
+                    self.data[FILE_MD5_FIELD] = MD5_DEFAULT
+                else:
+                    self.data[FILE_MD5_FIELD]  = md5_header.strip()
 
             elif type == UPLOAD_TYPES[1]: #metadata
                 #check intention
-                intention = self.data.get('intention')
+                intention = self.data.get(INTENTION)
                 if intention is None:
                     self.log.critical(f'intention is required for metadata uploading!')
                     return False
                 elif intention not in INTENTIONS:
                     self.log.critical(f'{intention} is not a valid intention!')
                     return False
+                else:
+                    self.data[INTENTION]  = intention.strip()
         
-        filepath = self.data.get('data')
+        filepath = self.data.get(FILE_DIR)
         if filepath is None:
             self.log.critical(f'data file path is required!')
             return False
-
+        else:
+            filepath = filepath.strip()
+            self.data[FILE_DIR]  = filepath
+            if not os.path.isdir(filepath): 
+                self.log.critical(f'data file path is not valid!')
+                return False
+  
         return True
 

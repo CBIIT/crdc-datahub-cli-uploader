@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+
+import csv
+import os
+import glob
+import json
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
+    TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON
+from common.utils import _clean_up_key_value
+from bento.common.utils import get_logger, get_md5
+
+
+"""
+For files: read manifest file and validate local files’ sizes and md5s
+For metadata: validate data folder contains TSV or TXT files
+Compose a list of files to be updated and their sizes (metadata or files)
+"""
+
+class File_Validator:
+    
+    def __init__(self, configs):
+        self.configs = configs
+        self.uploadType = configs[UPLOAD_TYPE]
+        self.file_dir = configs[FILE_DIR]
+        self.pre_manifest = configs[PRE_MANIFEST]
+        self.fileList = [] #list of files object {file_name, file_size, invalid_reason}
+        self.log = get_logger('File_Validator')
+
+    def validate(self):
+        # check file dir
+        if not os.path.isdir(self.file_dir):
+            self.log.critical(f'data file path is not valid!')
+            return False
+        
+        
+        if self.uploadType == UPLOAD_TYPES[1]: #metadata
+            txt_files = glob.glob('{}/*.txt'.format(self.file_dir ))
+            tsv_files = glob.glob('{}/*.tsv'.format(self.file_dir ))
+            file_list = txt_files + tsv_files
+            if len(file_list) == 0:
+                self.log.critical(f'No valid metadata file(s) found!')
+                return False
+            
+            for filepath in file_list:
+                size = os.path.getsize(filepath)
+                #metadata file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None}
+                self.fileList.append({FILE_NAME_DEFAULT:filepath, FILE_SIZE_DEFAULT: size})
+
+        elif self.uploadType == UPLOAD_TYPES[0]: #file
+            if not os.path.isfile(self.pre_manifest):
+                self.log.critical(f'manifest file is not valid!')
+                return False
+            return self.validate_size_md5()
+
+        return True
+
+    #validate file's size and md5 against ree-manifest.   
+    def validate_size_md5(self):
+        self.files_info =  self.read_manifest()
+        if len(self.files_info ) == 0:
+            return False
+        for info in self.files_info:
+            invalid_reason = ""
+            file_path = os.path.join(self.file_dir, info[FILE_NAME_DEFAULT])
+            size_info = 0 if not info[FILE_SIZE_DEFAULT] or not info[FILE_SIZE_DEFAULT].isdigit() else int(info[FILE_SIZE_DEFAULT])
+            info[FILE_SIZE_DEFAULT]  = size_info #convert to int
+
+            if not os.path.isfile(file_path):
+                invalid_reason += f"File {file_path} does not exist!"
+                #file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None, FILE_INVALID_REASON: None}
+                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: size_info, FILE_INVALID_REASON: invalid_reason})
+                continue
+            
+            file_size = os.path.getsize(file_path)
+            if file_size != size_info:
+                invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifet {info[FILE_SIZE_DEFAULT]}!"
+                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
+                continue
+
+            md5_info = info[MD5_DEFAULT] 
+            if not md5_info:
+                invalid_reason += f"MD5 of {info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
+                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
+                continue
+            #calculte file md5
+            md5sum = get_md5(file_path)
+            if md5_info != md5sum:
+                invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifet {md5_info}!"
+                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
+                continue
+
+            self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: None})
+
+        return True
+    
+    #public function to read pre-manifest and return list of file records 
+    def read_manifest(self):
+        files_info = []
+        try:
+            with open(self.pre_manifest) as pre_m:
+                reader = csv.DictReader(pre_m, delimiter='\t')
+                #skip hearder
+                next(reader)
+                for info in reader:
+                    file_info = _clean_up_key_value(info.items())
+                    files_info.append({
+                        FILE_NAME_DEFAULT: file_info.get(FILE_NAME_FIELD),
+                        FILE_SIZE_DEFAULT: file_info.get(FILE_SIZE_FIELD),
+                        MD5_DEFAULT: file_info.get(FILE_MD5_FIELD)
+                    })
+        except Exception as e:
+            self.log.debug(e)
+            self.log.error("Failed to read pre-manifest file!")
+
+        return files_info
+
