@@ -143,4 +143,4 @@ backup/
 **/bento/
 
 #config files for testing
-config/test*
+**/configs/

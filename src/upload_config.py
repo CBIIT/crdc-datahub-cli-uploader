@@ -13,7 +13,7 @@ Command line arguments / configuration
 --submission, submission ID, required
 --type, valid value in [“file”, “metadata”], required
 --data, folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
-config_file, configuration file path, can potentially contain all above parameters, optional{}
+--config, configuration file path, can potentially contain all above parameters, optional{}
 Following arguments are needed to read important data from manifest, conditional required when type = “file”
 
 --manifest, path to manifest file, conditional required when type = “file”
@@ -50,31 +50,29 @@ class Config():
         parser.add_argument('-i', '--intention,', help='valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”')
 
         #for better user experience, using configuration file to pass all args above
-        #parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
-        parser.add_argument('config_file', help='configuration file, contain all parameters without input args one by one, preferred')
+        parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
+        #parser.add_argument('config_file', help='configuration file, contain all parameters without input args one by one, preferred')
        
         args = parser.parse_args()
 
-        if args.config_file and os.path.isfile(args.config_file):
-            with open(args.config_file) as c_file:
+        self.data = {}
+        if args.config and os.path.isfile(args.config.strip()):
+            with open(args.config.strip()) as c_file:
                 self.data = yaml.safe_load(c_file)['Config']
-
-        if self.data is None:
-            self.data = {}
 
         self._override(args)
 
     def _override(self, args):
         for key, value in vars(args).items():
             # Ignore config file argument
-            if key == 'config_file':
+            if key == 'config':
                 continue
             if isinstance(value, bool):
                 if value:
-                    self.data[key] = value
+                    self.data[key] = value.strip()
 
             elif value is not None:
-                self.data[key] = value
+                self.data[key] = value.strip()
 
     def validate(self):
         if len(self.data)== 0:
