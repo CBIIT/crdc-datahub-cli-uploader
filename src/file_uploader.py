@@ -10,6 +10,9 @@ from bento.common.utils import get_logger, get_log_file, get_uuid, LOG_PREFIX, U
 from copier import Copier
 from upload_config import Config
 from bento.common.s3 import upload_log_file
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
+    SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD,S3_BUCKET, UPLOAD_STATUS
+from common.utils import clean_up_strs, clean_up_key_value
 
 if LOG_PREFIX not in os.environ:
     os.environ[LOG_PREFIX] = 'File_Loader'
@@ -59,52 +62,27 @@ class FileLoader:
     VERIFY_MD5 = 'verify_md5'
     LOG_UPLOAD_DIR = 'upload_log_dir'
 
-    def __init__(self, mode, adapter_module=None, adapter_class=None, adapter_params=None, domain=None, bucket=None,
-                 prefix=None, pre_manifest=None, first=1, count=-1, job_queue=None, result_queue=None, retry=3,
-                 overwrite=False, dryrun=False, verify_md5=False, upload_log_dir = None):
+    def __init__(self, configs, file_list, field_names):
         """"
 
-        :param bucket: string type
-        :param pre_manifest: string type, holds path to pre-manifest
-        :param first: first file of files to process, file 1 is in line 2 of pre-manifest
-        :param count: number of files to process
+        :param configs: all configurations for file uploading
+        :param file_list: list of file path, size
 
         """
+        retry=3
+        verify_md5=False
+        dryrun=False
+        overwrite=False
 
-        if self.mode != SLAVE_MODE:
-            if not bucket:
-                raise ValueError('Empty destination bucket name')
-            self.bucket_name = bucket
 
-            if prefix and isinstance(prefix, str):
-                self.prefix = removeTrailingSlash(prefix)
-            else:
-                raise ValueError(f'Invalid prefix: "{prefix}"')
-
-            if not pre_manifest or not os.path.isfile(pre_manifest):
-                raise ValueError(f'Pre-manifest: "{pre_manifest}" does not exist')
-            self.pre_manifest = pre_manifest
-
-            if not domain:
-                raise ValueError(f'Empty domain!')
-            self.domain = domain
-
-            self.adapter_config = {
-                self.ADAPTER_PARAMS: adapter_params,
-                self.ADAPTER_CLASS: adapter_class,
-                self.ADAPTER_MODULE: adapter_module
-            }
-            self._init_adapter(adapter_module, adapter_class, adapter_params)
-        else:
-            self.adapter = None
-            self.adapter_config = {}
-
+        self.prefix = f'{configs[SUBMISSION_ID]}/{UPLOAD_TYPES[0]}' # prefix is submissionId/file
+        self.bucket_name = configs[S3_BUCKET]
+        self.pre_manifest = configs[PRE_MANIFEST]
+        self.file_info_list = file_list
+        self.field_names = field_names
         self.copier = None
-
-        if not first > 0 or count == 0:
-            raise ValueError(f'Invalid first ({first}) or count ({count})')
-        self.skip = first - 1
-        self.count = count
+        self.count = len(file_list)
+        self.domain = "caninecommons.cancer.gov"
 
         if not isinstance(retry, int) and retry > 0:
             raise ValueError(f'Invalid retry value: {retry}')
@@ -116,7 +94,7 @@ class FileLoader:
             raise TypeError(f'Invalid dryrun value: {dryrun}')
         self.dryrun = dryrun
         self.verify_md5 = verify_md5
-        self.upload_log_dir = upload_log_dir
+        self.upload_log_dir = None
 
         self.log = get_logger('FileLoader')
 
@@ -124,12 +102,6 @@ class FileLoader:
         self.files_processed = 0
         self.files_skipped = 0
         self.files_failed = 0
-
-    def _init_adapter(self, adapter_module, adapter_class, params):
-        self.adapter = load_plugin(adapter_module, adapter_class, params)
-
-        if not hasattr(self.adapter, 'filter_fields'):
-            raise TypeError(f'Adapter "{adapter_class}" does not have a "filter_fields" method')
 
     def get_indexd_manifest_name(self, file_name):
         folder = os.path.dirname(file_name)
@@ -171,51 +143,25 @@ class FileLoader:
         record[self.FILE_STAT] = self.DEFAULT_STAT
         record[Copier.ACL] = result[Copier.ACL]
         return record
-
-    @staticmethod
-    def _clean_up_field_names(headers):
-        """
-        Removes leading and trailing spaces from header names
-        :param headers:
-        :return:
-        """
-        return [header.strip() for header in headers]
-
-    @staticmethod
-    def _clean_up_record(record):
-        """
-        Removes leading and trailing spaces from keys in org_record
-        :param record:
-        :return:
-        """
-        return {key if not key else key.strip(): value if not value else value.strip() for key, value in record.items()}
-
+    
     def _read_pre_manifest(self):
         files = []
-        with open(self.pre_manifest) as pre_m:
-            reader = csv.DictReader(pre_m, delimiter='\t')
-            self.field_names = self._clean_up_field_names(reader.fieldnames)
-            for _ in range(self.skip):
-                next(reader)
-                self.files_skipped += 1
-
-            line_num = self.files_skipped + 1
-            for info in reader:
-                self.files_processed += 1
-                line_num += 1
-                files.append({
-                    self.ADAPTER_CONF: self.adapter_config,
-                    self.LINE: line_num,
-                    self.TTL: self.retry,
-                    self.OVERWRITE: self.overwrite,
-                    self.DRY_RUN: self.dryrun,
-                    self.INFO: self._clean_up_record(info),
-                    self.BUCKET: self.bucket_name,
-                    self.PREFIX: self.prefix,
-                    self.VERIFY_MD5: self.verify_md5
-                })
-                if self.files_processed >= self.count > 0:
-                    break
+        line_num = self.files_skipped + 1
+        for info in self.file_info_list:
+            self.files_processed += 1
+            line_num += 1
+            files.append({
+                self.LINE: line_num,
+                self.TTL: self.retry,
+                self.OVERWRITE: self.overwrite,
+                self.DRY_RUN: self.dryrun,
+                self.INFO: info,
+                self.BUCKET: self.bucket_name,
+                self.PREFIX: self.prefix,
+                self.VERIFY_MD5: self.verify_md5
+            })
+            if self.files_processed >= self.count > 0:
+                break
         return files
 
     # Use this method in solo mode
@@ -225,10 +171,9 @@ class FileLoader:
           :return:
         """
 
-        self.copier = Copier(self.bucket_name, self.prefix, self.adapter)
+        self.copier = Copier(self.bucket_name, self.prefix)
 
         file_queue = deque(self._read_pre_manifest())
-
         indexd_manifest = self.get_indexd_manifest_name(self.pre_manifest)
         neo4j_manifest = self.get_neo4j_manifest_name(self.pre_manifest)
 
@@ -237,7 +182,7 @@ class FileLoader:
             indexd_writer.writeheader()
             with open(neo4j_manifest, 'w', newline='\n') as neo4j_f:
                 fieldnames = self.DATA_FIELDS
-                for field in self.adapter.filter_fields(self.field_names):
+                for field in self.field_names:
                     if field not in fieldnames:
                         fieldnames.append(field)
                 neo4j_writer = csv.DictWriter(neo4j_f, delimiter='\t', fieldnames=fieldnames)
@@ -245,27 +190,20 @@ class FileLoader:
 
                 while file_queue:
                     job = file_queue.popleft()
-                    job[self.TTL] -= 1
                     file_info = job[self.INFO]
                     file_skip = False
-                    if 'size_field' in self.adapter_config['adapter_params'].keys():
-                        file_path = os.path.join(self.adapter_config['adapter_params']['data_dir'], file_info['file_name'])
-                        file_size = os.path.getsize(file_path)
-                        file_size_field = self.adapter_config['adapter_params']['size_field']
-                        if file_info[file_size_field] != '':
-                            if file_size != int(file_info[file_size_field]):
-                                self.log.error('Line {}: file "{}" file size validation failed: expected file size {} bytes, actual file size: {}, file skipped!'.format(job[self.LINE], file_info['file_name'], file_info[file_size_field], file_size))
-                                file_skip = True
+                    job[self.TTL] -= 1
                     if file_skip == False:
                         try:
-                            result = self.copier.copy_file(file_info, self.overwrite, self.dryrun, self.verify_md5)
+                            result = self.copier.copy_file(file_info, self.overwrite, self.dryrun, self.field_names, self.verify_md5)
                             if result[Copier.STATUS]:
                                 indexd_record = {}
                                 self.populate_indexd_record(indexd_record, result)
                                 indexd_writer.writerow(indexd_record)
-                                neo4j_record = result[Copier.FIELDS]
+                                neo4j_record = {key: None for key in result[Copier.FIELDS]}
                                 self.populate_neo4j_record(neo4j_record, result)
                                 neo4j_writer.writerow(neo4j_record)
+                                file_info[Copier.STATUS] = "Completed"
                             else:
                                 self._deal_with_failed_file(job, file_queue)
                         except Exception as e:
@@ -291,13 +229,17 @@ class FileLoader:
                 self.log.debug(e)
                 self.log.error(f'Uploading log file {ori_log_file} failed!')
 
+        return self.files_failed == 0
+
     def _deal_with_failed_file(self, job, queue):
-        if job[self.TTL] > 0:
+        if job[self.TTL]  > 0:
             self.log.error(f'Line: {job[self.LINE]} - Uploading file FAILED! Retry left: {job[self.TTL]}')
             queue.append(job)
         else:
             self.log.critical(f'Uploading file failure exceeded maximum retry times, abort!')
             self.files_failed += 1
+            file_info = job[self.INFO]
+            file_info[UPLOAD_STATUS] = "Failed"
 
     def _deal_with_failed_file_sqs(self, job):
         self.log.info(f'Upload file FAILED, {job[self.TTL] - 1} retry left!')

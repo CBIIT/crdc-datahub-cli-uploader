@@ -7,6 +7,8 @@ import requests
 
 from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, stream_download, get_md5
 from bento.common.s3 import S3Bucket
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
+    TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON
 
 
 def _is_valid_url(org_url):
@@ -59,7 +61,7 @@ class Copier:
     FIELDS = 'fields'
     ACL = 'acl'
 
-    def __init__(self, bucket_name, prefix, adapter):
+    def __init__(self, bucket_name, prefix):
 
         """"
         Copy file from URL or local file to S3 bucket
@@ -74,13 +76,7 @@ class Copier:
             self.prefix = removeTrailingSlash(prefix)
         else:
             raise ValueError(f'Invalid prefix: "{prefix}"')
-
-        # Verify adapter has all functions needed
-        for attr in self.adapter_attrs:
-            if not hasattr(adapter, attr):
-                raise TypeError(f'Adapter does not have "{attr}" attribute/method')
-        self.adapter = adapter
-
+       
         self.log = get_logger('Copier')
         self.files_exist_at_dest = 0
         self.files_copied = 0
@@ -96,7 +92,7 @@ class Copier:
         if prefix != self.prefix:
             self.prefix = prefix
 
-    def copy_file(self, file_info, overwrite, dryrun, verify_md5=False):
+    def copy_file(self, file_info, overwrite, dryrun, field_names, verify_md5=False):
         """
         Copy a file to S3 bucket
         :param file_info: dict that has file information
@@ -107,62 +103,25 @@ class Copier:
         """
         local_file = None
         try:
-            self.adapter.clear_file_info()
-            self.adapter.load_file_info(file_info)
-            org_url = self.adapter.get_org_url()
-            if not _is_valid_url(org_url):
-                self.log.error(f'"{org_url}" is not a valid URL!')
-                return {self.STATUS: False}
-            if not self._file_exists(org_url):
-                return {self.STATUS: False}
-
+            org_url = file_info[FILE_NAME_DEFAULT]
+            file_name = os.path.basename(org_url)
             self.log.info(f'Processing {org_url}')
-            key = f'{self.prefix}/{self.adapter.get_file_name()}'
-
-            org_size = self.adapter.get_org_size()
-            if not org_size:
-                self.log.error(f'Could not get original size for {org_url}')
-                return {self.STATUS: False}
+            key = f'{self.prefix}/{file_name}'
+            org_size = file_info[FILE_SIZE_DEFAULT]
             self.log.info(f'Original file size: {format_bytes(org_size)}.')
-
-            file_name = self.adapter.get_file_name()
-            org_md5 = self.adapter.get_org_md5()
-            if not org_md5:
-                self.log.info(f'Original MD5 not available, calculate MD5 locally...')
-                local_file = f'tmp/{file_name}'
-                org_md5 = _get_org_md5(org_url, local_file)
-            elif verify_md5:
-                self.log.info(f'Downloading file and verifying MD5 locally...')
-                local_file = f'tmp/{file_name}'
-                local_md5 = _get_org_md5(org_url, local_file)
-                if local_md5.lower() != org_md5.lower():
-                    self.log.error(f'MD5 verify failed! Original MD5: {org_md5}, local MD5: {local_md5}')
-                    return {self.STATUS: False}
-                self.log.info(f'MD5 verified!')
-
+            org_md5 = file_info[MD5_DEFAULT]
             self.log.info(f'Original MD5 {org_md5}')
 
             succeed = {self.STATUS: True,
                        self.MD5: org_md5,
                        self.NAME: file_name,
                        self.KEY: key,
-                       self.FIELDS: self.adapter.get_fields(),
-                       self.ACL: self.adapter.get_acl(),
+                       self.FIELDS: field_names,
+                       self.ACL: None,
                        self.SIZE: org_size
                        }
 
-            if dryrun:
-                if verify_md5:  #assume validate file if verify_md5 is true and dryrun is true
-                    if _is_local(org_url): #validate org_file_size against real local file size
-                        file_path = _get_local_path(org_url)
-                        real_file_size = os.path.getsize(file_path)
-                        if org_size == real_file_size:
-                            self.log.info(f'file size verified')
-                            return succeed
-                        else:
-                            self.log.error(f'file verify failed! Original file size: {org_size}, local file size: {real_file_size}')
-                            return {self.STATUS: False}
-                               
+            if dryrun:           
                 self.log.info(f'Copying file {key} skipped (dry run)')
                 return succeed
             
@@ -173,19 +132,8 @@ class Copier:
 
             self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key} ...')
             # Original file is local
-            if _is_local(org_url):
-                file_path = _get_local_path(org_url)
-                with open(file_path, 'rb') as stream:
-                    dest_size = self._upload_obj(stream, key, org_size)
-            # Original file has been downloaded to local
-            elif local_file:
-                with open(local_file, 'rb') as stream:
-                    dest_size = self._upload_obj(stream, key, org_size)
-            # Original file is remote file
-            else:
-                with requests.get(org_url, stream=True) as r:
-                    dest_size = self._upload_obj(r.raw, key, org_size)
-
+            with open(org_url, 'rb') as stream:
+                dest_size = self._upload_obj(stream, key, org_size)
             if dest_size != org_size:
                 self.log.error(f'Copy failed: destination file size is different from original!')
                 return {self.STATUS: False}

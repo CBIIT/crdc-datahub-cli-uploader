@@ -1,12 +1,21 @@
 
 
 """ 
-_clean_up_key_value(dict)
+clean_up_key_value(dict)
 Removes leading and trailing spaces from keys and values in a dictionary
 :param dict:
 :return: cleaned dict
 """   
-@staticmethod
-def _clean_up_key_value(dict):
+def clean_up_key_value(dict):
         
-        return {key if not key else key.strip(): value if not value else value.strip() for key, value in dict}
+    return {key if not key else key.strip() if isinstance(key, str) else key : 
+            value if not value else value.strip() if isinstance(value, str) else value for key, value in dict.items()}
+
+"""
+Removes leading and trailing spaces from header names
+:param headers:
+:return:
+"""
+def clean_up_strs(str_arr):
+       
+    return [item.strip() for item in str_arr]

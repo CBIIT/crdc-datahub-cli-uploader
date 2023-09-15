@@ -6,11 +6,11 @@ import glob
 import json
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON
-from common.utils import _clean_up_key_value
+from common.utils import clean_up_key_value, clean_up_strs
 from bento.common.utils import get_logger, get_md5
 
 
-"""
+""" Requirement for the ticket crdcdh-343
 For files: read manifest file and validate local files’ sizes and md5s
 For metadata: validate data folder contains TSV or TXT files
 Compose a list of files to be updated and their sizes (metadata or files)
@@ -68,7 +68,7 @@ class FileValidator:
             if not os.path.isfile(file_path):
                 invalid_reason += f"File {file_path} does not exist!"
                 #file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None, FILE_INVALID_REASON: None}
-                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: size_info, FILE_INVALID_REASON: invalid_reason})
+                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, FILE_INVALID_REASON: invalid_reason})
                 continue
             
             file_size = os.path.getsize(file_path)
@@ -80,16 +80,16 @@ class FileValidator:
             md5_info = info[MD5_DEFAULT] 
             if not md5_info:
                 invalid_reason += f"MD5 of {info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
-                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
+                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, FILE_INVALID_REASON: invalid_reason})
                 continue
             #calculte file md5
             md5sum = get_md5(file_path)
             if md5_info != md5sum:
                 invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifet {md5_info}!"
-                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
+                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, FILE_INVALID_REASON: invalid_reason})
                 continue
 
-            self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: None})
+            self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, FILE_INVALID_REASON: None})
 
         return True
     
@@ -99,14 +99,13 @@ class FileValidator:
         try:
             with open(self.pre_manifest) as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
-                #skip hearder
-                next(reader)
+                self.field_names = clean_up_strs(reader.fieldnames)
                 for info in reader:
-                    file_info = _clean_up_key_value(info.items())
+                    file_info = clean_up_key_value(info)
                     files_info.append({
-                        FILE_NAME_DEFAULT: file_info.get(FILE_NAME_FIELD),
-                        FILE_SIZE_DEFAULT: file_info.get(FILE_SIZE_FIELD),
-                        MD5_DEFAULT: file_info.get(FILE_MD5_FIELD)
+                        FILE_NAME_DEFAULT: file_info[self.configs.get(FILE_NAME_FIELD)],
+                        FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
+                        MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
                     })
         except Exception as e:
             self.log.debug(e)

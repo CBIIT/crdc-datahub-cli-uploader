@@ -14,6 +14,10 @@ TOKEN = "token"
 SUBMISSION_ID = "submission"
 PRE_MANIFEST = "manifest"
 FILE_DIR = "data"
+S3_BUCKET = "bucket"
 
 #file validation 
 FILE_INVALID_REASON = "invalid_reason"
+
+#upload
+UPLOAD_STATUS ="upload_status"

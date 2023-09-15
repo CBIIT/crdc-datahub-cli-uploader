@@ -5,7 +5,7 @@
 import os
 import sys
 from bento.common.utils import get_logger, get_log_file, get_uuid, LOG_PREFIX, UUID, get_time_stamp, removeTrailingSlash, load_plugin
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, S3_BUCKET, FILE_INVALID_REASON
 from upload_config import Config, UPLOAD_HELP
 from file_validator import FileValidator
 from file_uploader import FileLoader
@@ -37,19 +37,25 @@ def controller():
         log.error("Failed to upload files: found invalid file(s)!")
         print("Failed to upload files: found invalid file(s)!  Please check log file in tmp folder for details.")
         return
+    
+    field_names = validator.field_names
+    #step 3: create a batch
 
-    #step 3: get aws sts temp credential for uploading files to s3 bucket.
-
-    #step 4: create a batch
-
+    #step 4: get aws sts temp credential for uploading files to s3 bucket.
+    configs[S3_BUCKET] = "dhloadertest" #debug code
     #step 5: upload all files to designated s3 bukect or load all metadata into DB
     if configs.get(UPLOAD_TYPE) == UPLOAD_TYPES[0]: #file
-        loader = FileLoader(**configs)
+        valid_file_list = [file for file in validator.fileList if not file[FILE_INVALID_REASON] ]
+        invalid_file_list = [file for file in validator.fileList if file[FILE_INVALID_REASON]]
+        loader = FileLoader(configs, valid_file_list, field_names)
         result = loader.upload()
+        print(result)
+
     elif config.data.get(UPLOAD_TYPE) == UPLOAD_TYPES[1]: #metadata
-        loader = DataLoader()
+        loader = DataLoader(validator.fileList)
         result = loader.load()
 
+    
     #step 5: update the batch
 
 if __name__ == '__main__':
