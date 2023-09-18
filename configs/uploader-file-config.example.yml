@@ -1,4 +1,6 @@
 Config:
+    #API endpoint URL, required
+    api-url:
     #API token string, required
     token: 
     #submission ID, required

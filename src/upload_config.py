@@ -37,6 +37,7 @@ class Config():
     def __init__(self):
         self.log = get_logger('Upload Config')
         parser = argparse.ArgumentParser(description='Upload files to AWS s3 bucket')
+        parser.add_argument('-p', '--api-url', help='API endpoint URL, required')
         parser.add_argument('-k', '--token', help='API token string, required')
         parser.add_argument('-u', '--submission', help='submission ID, required')
         parser.add_argument('-t', '--type', help='valid value in [“file”, “metadata”], required')
