@@ -5,8 +5,9 @@
 import os
 import sys
 from bento.common.utils import get_logger, get_log_file, get_uuid, LOG_PREFIX, UUID, get_time_stamp, removeTrailingSlash, load_plugin
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, S3_BUCKET, FILE_INVALID_REASON
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, S3_BUCKET, FILE_INVALID_REASON, API_URL, SUBMISSION_ID, INTENTION, BUCKET, FILE_PREFIX
 from common.s3util import get_temp_creadential
+from common.graphql_client import APIInvoker
 from upload_config import Config, UPLOAD_HELP
 from file_validator import FileValidator
 from file_uploader import FileLoader
@@ -33,6 +34,7 @@ def controller():
 
     #step 2: validate file or metadata
     configs = config.data
+    upload_type = configs[UPLOAD_TYPE]
     validator = FileValidator(configs)
     if not validator.validate():
         log.error("Failed to upload files: found invalid file(s)!")
@@ -40,14 +42,31 @@ def controller():
         return
     file_list = validator.fileList
     field_names = validator.field_names #name array
-
+    
     #step 3: create a batch
-
+    apiInvoker = APIInvoker(configs[configs],  configs[API_URL], configs[SUBMISSION_ID], configs[INTENTION])
+    newBatch = {}
+    if apiInvoker.create_bitch():
+        newBatch = apiInvoker.new_batch
+    else:
+        log.error("Failed to upload files: can't create new batch!")
+        print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
+        return
 
     #step 4: get aws sts temp credential for uploading files to s3 bucket.
-    temp_credential = get_temp_creadential("420434175168", "crdcdh-test-submission") # test codes
-
-    configs[S3_BUCKET] = "dhloadertest" #debug code
+    #temp_credential = get_temp_creadential("420434175168", "crdcdh-test-submission") # test codes
+    temp_credential = {}
+    if apiInvoker.get_temp_credential():
+        temp_credential = newBatch = apiInvoker.new_batch
+    else:
+        log.error("Failed to upload files: can't get temp credential!")
+        print("Failed to upload files: can't get temp credential! Please check log file in tmp folder for details.")
+        return
+    
+    configs[S3_BUCKET] = newBatch[BUCKET]
+    configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
+    if upload_type ==  UPLOAD_TYPES[1]:
+        configs["presignedUrls"] = newBatch["files"]
     #step 5: upload all files to designated s3 bukect or load all metadata into DB
     if configs.get(UPLOAD_TYPE) == UPLOAD_TYPES[0]: #file
         valid_file_list = [file for file in file_list if not file[FILE_INVALID_REASON] ]
@@ -58,9 +77,19 @@ def controller():
     elif config.data.get(UPLOAD_TYPE) == UPLOAD_TYPES[1]: #metadata
         loader = DataLoader(validator.fileList)
         result = loader.load()
-
+    else: 
+        log.error("Failed to upload files: can't upload files to bukect!")
+        print("Failed to upload files: can't upload files to bukect! Please check log file in tmp folder for details.")
+        return
     
     #step 5: update the batch
+    batch = {}
+    if apiInvoker.update_bitch(validator.fileList):
+        batch = apiInvoker.batch
+    else:
+        log.error(f"Failed to update batch, {newBatch['_id']}")
+        print(f"Failed to update batch, {newBatch['_id']} Please check log file in tmp folder for details.")
+        return
 
 if __name__ == '__main__':
     controller()

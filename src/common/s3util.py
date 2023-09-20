@@ -156,11 +156,20 @@ class S3Bucket:
             return False
         
 def get_temp_creadential(iamId, role):
+    log = get_logger("AssumeRole Logger")
+    credentials= {}
     sts = boto3.client('sts')
-    assumed_role_obj = sts.assume_role(
-        RoleArn=f"arn:aws:iam::{iamId}:role/{role}",
-        RoleSessionName="AssumeRoleSession1"
-    )
-    credentials=assumed_role_obj['Credentials']
+    try:
+        assumed_role_obj = sts.assume_role(
+            RoleArn=f"arn:aws:iam::{iamId}:role/{role}",
+            RoleSessionName="AssumeRoleSession1"
+        )
+        credentials=assumed_role_obj['Credentials']
+    except ClientError as ce:
+        log.debug(ce)
+        log.error("No permissions to call sts:AssumeRole!")
+    except Exception as e:
+        log.debug(e)
+        log.error("Failed to call sts:AssumeRole!")
     return credentials
 

@@ -2,7 +2,7 @@ import argparse
 import os
 import yaml
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-    TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD
+    API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD
 from bento.common.utils import get_logger
 from common.utils import clean_up_key_value
 
@@ -10,7 +10,7 @@ from common.utils import clean_up_key_value
 #requirements of the ticket CRDCDH-13:
 UPLOAD_HELP = """
 Command line arguments / configuration
-
+--api-url, API endpoint URL, required
 --token, API token string, required
 --submission, submission ID, required
 --type, valid value in [“file”, “metadata”], required
@@ -37,7 +37,7 @@ class Config():
     def __init__(self):
         self.log = get_logger('Upload Config')
         parser = argparse.ArgumentParser(description='Upload files to AWS s3 bucket')
-        parser.add_argument('-p', '--api-url', help='API endpoint URL, required')
+        parser.add_argument('-a', '--api-url', help='API endpoint URL, required')
         parser.add_argument('-k', '--token', help='API token string, required')
         parser.add_argument('-u', '--submission', help='submission ID, required')
         parser.add_argument('-t', '--type', help='valid value in [“file”, “metadata”], required')
@@ -79,6 +79,14 @@ class Config():
         if len(self.data)== 0:
             return False
         self.data = clean_up_key_value(self.data)
+        
+        apiUrl = self.data.get(API_URL)
+        if apiUrl is None:
+            self.log.critical(f'api url is required!')
+            return False
+        else:
+            self.data[API_URL]  = apiUrl
+
         token = self.data.get(TOKEN)
         if token is None:
             self.log.critical(f'token is required!')

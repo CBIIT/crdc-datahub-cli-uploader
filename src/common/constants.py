@@ -11,6 +11,7 @@ FILE_SIZE_DEFAULT = "file_size"  #match data model file size name
 FILE_MD5_FIELD = "md5-field"
 MD5_DEFAULT = "md5sum" #match data model md5 name
 TOKEN = "token"
+API_URL = "api-url"
 SUBMISSION_ID = "submission"
 PRE_MANIFEST = "manifest"
 FILE_DIR = "data"
@@ -21,3 +22,7 @@ FILE_INVALID_REASON = "invalid_reason"
 
 #upload
 UPLOAD_STATUS ="upload_status"
+
+#S3
+BUCKET = "bucketName"
+FILE_PREFIX = "filePrefix" #bucket folders
