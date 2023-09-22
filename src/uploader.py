@@ -44,7 +44,7 @@ def controller():
     field_names = validator.field_names #name array
     
     #step 3: create a batch
-    apiInvoker = APIInvoker(configs[configs],  configs[API_URL], configs[SUBMISSION_ID], configs[INTENTION])
+    apiInvoker = APIInvoker(configs)
     newBatch = {}
     if apiInvoker.create_bitch():
         newBatch = apiInvoker.new_batch
@@ -54,8 +54,7 @@ def controller():
         return
 
     #step 4: get aws sts temp credential for uploading files to s3 bucket.
-    #temp_credential = get_temp_creadential("420434175168", "crdcdh-test-submission") # test codes
-    temp_credential = {}
+    temp_credential = {}  #passed testing
     if apiInvoker.get_temp_credential():
         temp_credential = newBatch = apiInvoker.new_batch
     else:
@@ -67,6 +66,7 @@ def controller():
     configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
     if upload_type ==  UPLOAD_TYPES[1]:
         configs["presignedUrls"] = newBatch["files"]
+
     #step 5: upload all files to designated s3 bukect or load all metadata into DB
     if configs.get(UPLOAD_TYPE) == UPLOAD_TYPES[0]: #file
         valid_file_list = [file for file in file_list if not file[FILE_INVALID_REASON] ]

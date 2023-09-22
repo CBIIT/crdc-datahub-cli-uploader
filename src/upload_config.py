@@ -98,11 +98,11 @@ class Config():
         if submissionId is None:
             self.log.critical(f'submission Id is required!')
             return False
-        elif isinstance(submissionId, str):
-            if not submissionId.isdigit():
-                self.log.critical(f'submission Id is not integer!')
-            else:
-                self.data[SUBMISSION_ID] =int(submissionId) 
+        # elif isinstance(submissionId, str):  requirement changed, the submit id is a string now
+        #     if not submissionId.isdigit():
+        #         self.log.critical(f'submission Id is not integer!')
+        #     else:
+        #         self.data[SUBMISSION_ID] =int(submissionId) 
         
         type = self.data.get(UPLOAD_TYPE)
         if type is None:

@@ -3,15 +3,16 @@
 import requests
 import json
 from bento.common.utils import get_logger
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, API_URL, SUBMISSION_ID, INTENTION, TOKEN
 
 class APIInvoker:
-    def __init__(self, api_token, api_url, submissionId, intention):
-        self.token = api_token
+    def __init__(self, configs):
+        self.token = configs.get(TOKEN)
         self.headers = {'Authorization': f'Bearer {self.token}'}
-        self.url = api_url
-        self.submissionId = submissionId
-        self.intention = intention
-        self.log = get_logger('FileLoader')
+        self.url = configs.get(API_URL)
+        self.submissionId = configs.get(SUBMISSION_ID)
+        self.intention = configs.get(INTENTION)
+        self.log = get_logger('GraphQL API')
 
     #to do 
     #1) get sts temp creadential for file/metadata uploading to S3 bucket
@@ -19,19 +20,21 @@ class APIInvoker:
         self.cred = {}
         body = """
         mutation {
-            createTempCredentials (submissionID: self.submissionId) {
+            createTempCredentials (submissionID: \"""" + self.submissionId + """\") {
                 accessKeyId,
                 secretAccessKey,
                 sessionToken
             }
         }
         """
+        # print(body)
+        # print(self.headers)
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
             self.log.info("get_temp_credential response status code: ", response.status_code)
             if status == 200: 
-                self.cred = json.load(response.content)["data"]["createTempCredentials"]
+                self.cred = json.loads(response.content)["data"]["createTempCredentials"]
                 return True
             else:
                 self.log.error('Get temp creadential failed!')
@@ -49,9 +52,9 @@ class APIInvoker:
         body = """
         mutation {
             createBatch (
-                submissionID: self.submissionId, 
-                metadataIntention: self.intention, 
-                files: file_list
+                submissionID: \"""" + self.submissionId + """\", 
+                metadataIntention: \"""" + self.intention+ """\", 
+                files: """ + file_list + """
             ){
                 _id,
                 displayID,
@@ -73,7 +76,7 @@ class APIInvoker:
             status = response.status_code
             self.log.info("create_bitch response status code: ", response.status_code)
             if status == 200: 
-                self.new_batch = json.load(response.content)["data"]["createBatch"]
+                self.new_batch = json.loads(response.content)["data"]["createBatch"]
                 return True
             else:
                 self.log.error('Create batch failed!')
@@ -88,7 +91,10 @@ class APIInvoker:
         self.batch = {}
         body = """
         mutation {
-            updateBatch (batchID: batchID, files: UploadResult])
+            updateBatch (
+                batchID: \"""" + batchID + """\", 
+                files: """ + uploaded_files + """
+                )
             {
                 _id,
                 displayID,
