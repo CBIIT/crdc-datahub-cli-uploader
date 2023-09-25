@@ -84,15 +84,12 @@ class Config():
         if apiUrl is None:
             self.log.critical(f'api url is required!')
             return False
-        else:
-            self.data[API_URL]  = apiUrl
 
         token = self.data.get(TOKEN)
         if token is None:
             self.log.critical(f'token is required!')
             return False
-        else:
-            self.data[TOKEN]  = token
+
         
         submissionId = self.data.get(SUBMISSION_ID)
         if submissionId is None:
@@ -112,7 +109,8 @@ class Config():
             self.log.critical(f'{type} is not valid uploading type!')
             return False
         else:
-            self.data[UPLOAD_TYPE] = type
+            # print(UPLOAD_TYPES[0], "first type")
+            # print(UPLOAD_TYPES[1], "second type")
             if type == UPLOAD_TYPES[0]: #file
                 #check manifest
                 manifest = self.data.get(PRE_MANIFEST)

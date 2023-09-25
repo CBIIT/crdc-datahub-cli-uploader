@@ -20,9 +20,9 @@ class FileValidator:
     
     def __init__(self, configs):
         self.configs = configs
-        self.uploadType = configs[UPLOAD_TYPE]
-        self.file_dir = configs[FILE_DIR]
-        self.pre_manifest = configs[PRE_MANIFEST]
+        self.uploadType = configs.get(UPLOAD_TYPE)
+        self.file_dir = configs.get(FILE_DIR)
+        self.pre_manifest = configs.get(PRE_MANIFEST)
         self.fileList = [] #list of files object {file_name, file_size, invalid_reason}
         self.log = get_logger('File_Validator')
 

@@ -34,41 +34,41 @@ def controller():
 
     #step 2: validate file or metadata
     configs = config.data
-    upload_type = configs[UPLOAD_TYPE]
+    upload_type = configs.get(UPLOAD_TYPE)
     validator = FileValidator(configs)
     if not validator.validate():
         log.error("Failed to upload files: found invalid file(s)!")
         print("Failed to upload files: found invalid file(s)!  Please check log file in tmp folder for details.")
         return
     file_list = validator.fileList
-    field_names = validator.field_names #name array
     
     #step 3: create a batch
     apiInvoker = APIInvoker(configs)
-    newBatch = {}
-    if apiInvoker.create_bitch():
-        newBatch = apiInvoker.new_batch
-    else:
-        log.error("Failed to upload files: can't create new batch!")
-        print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
-        return
+    # newBatch = {}  #API is not ready for integration
+    # if apiInvoker.create_bitch():
+    #     newBatch = apiInvoker.new_batch
+    # else:
+    #     log.error("Failed to upload files: can't create new batch!")
+    #     print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
+    #     return
 
     #step 4: get aws sts temp credential for uploading files to s3 bucket.
     temp_credential = {}  #passed testing
     if apiInvoker.get_temp_credential():
-        temp_credential = newBatch = apiInvoker.new_batch
+        temp_credential = apiInvoker.cred
     else:
         log.error("Failed to upload files: can't get temp credential!")
         print("Failed to upload files: can't get temp credential! Please check log file in tmp folder for details.")
         return
     
-    configs[S3_BUCKET] = newBatch[BUCKET]
-    configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
-    if upload_type ==  UPLOAD_TYPES[1]:
-        configs["presignedUrls"] = newBatch["files"]
+    # configs[S3_BUCKET] = newBatchBUCKET]
+    # configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
+    # if upload_type ==  UPLOAD_TYPES[1]:
+    #     configs["presignedUrls"] = newBatch["files"]
 
     #step 5: upload all files to designated s3 bukect or load all metadata into DB
     if configs.get(UPLOAD_TYPE) == UPLOAD_TYPES[0]: #file
+        field_names = validator.field_names #name array
         valid_file_list = [file for file in file_list if not file[FILE_INVALID_REASON] ]
         invalid_file_list = [file for file in file_list if file[FILE_INVALID_REASON]]
         loader = FileLoader(configs, valid_file_list, field_names)
@@ -83,13 +83,13 @@ def controller():
         return
     
     #step 5: update the batch
-    batch = {}
-    if apiInvoker.update_bitch(validator.fileList):
-        batch = apiInvoker.batch
-    else:
-        log.error(f"Failed to update batch, {newBatch['_id']}")
-        print(f"Failed to update batch, {newBatch['_id']} Please check log file in tmp folder for details.")
-        return
+    # batch = {} #API is not ready for integration
+    # if apiInvoker.update_bitch(validator.fileList):
+    #     batch = apiInvoker.batch
+    # else:
+    #     log.error(f"Failed to update batch, {newBatch['_id']}")
+    #     print(f"Failed to update batch, {newBatch['_id']} Please check log file in tmp folder for details.")
+    #     return
 
 if __name__ == '__main__':
     controller()
