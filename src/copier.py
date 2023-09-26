@@ -3,12 +3,15 @@ import os
 import re
 
 from boto3.s3.transfer import TransferConfig
+from botocore.exceptions import ClientError
 import requests
 
+from common.graphql_client import APIInvoker
+
 from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, stream_download, get_md5
-from bento.common.s3 import S3Bucket
+from common.s3util import S3Bucket
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-    TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON
+    TOKEN, SUBMISSION_ID, TEMP_CREDENTIAL, S3_BUCKET
 
 
 def _is_valid_url(org_url):
@@ -61,17 +64,20 @@ class Copier:
     FIELDS = 'fields'
     ACL = 'acl'
 
-    def __init__(self, bucket_name, prefix):
+    def __init__(self, bucket_name, prefix, configs):
 
         """"
         Copy file from URL or local file to S3 bucket
         :param bucket_name: string type
         """
+        self.configs = configs
         if not bucket_name:
             raise ValueError('Empty destination bucket name')
         self.bucket_name = bucket_name
-        self.bucket = S3Bucket(self.bucket_name)
-
+        self.bucket = S3Bucket()
+        #set s3 client based on credential and bucket.
+        self.bucket.set_s3_client(self.bucket_name, configs[TEMP_CREDENTIAL])
+         
         if prefix and isinstance(prefix, str):
             self.prefix = removeTrailingSlash(prefix)
         else:
@@ -82,10 +88,16 @@ class Copier:
         self.files_copied = 0
         self.files_not_found = set()
 
-    def set_bucket(self, bucket_name):
-        if bucket_name != self.bucket_name:
-            self.bucket_name = bucket_name
-            self.bucket = S3Bucket(self.bucket_name)
+    def refreshToken(self):
+        apiInvoker = APIInvoker(self.configs)
+        if apiInvoker.get_temp_credential():
+            temp_credential = apiInvoker.cred
+            self.configs[TEMP_CREDENTIAL] = temp_credential
+            return True
+        else:
+            self.log.error("Failed to upload files: can't refresh temp credential!")
+            return False
+    
 
     def set_prefix(self, raw_prefix):
         prefix = removeTrailingSlash(raw_prefix)
@@ -132,14 +144,21 @@ class Copier:
 
             self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key} ...')
             # Original file is local
-            with open(org_url, 'rb') as stream:
-                dest_size = self._upload_obj(stream, key, org_size)
+            dest_size = self._upload_obj(org_url, key, org_size)
             if dest_size != org_size:
                 self.log.error(f'Copy failed: destination file size is different from original!')
                 return {self.STATUS: False}
 
             return succeed
+        except ClientError as ce:
+            self.log.exception(f"Failed uploading file,{file_name} to {self.bucket_name}!", ce)
+            #handle temp credential expired error to refresh token for next file.
+            if ce.response[u'Error'][u'Code'] == 'ExpiredToken':
+                self.log.error(u"AWS Token expired!")
+                if self.refreshToken(): 
+                    self.bucket.set_s3_client(self.bucket_name, self.configs[TEMP_CREDENTIAL])
 
+            return {self.STATUS: False}
         except Exception as e:
             self.log.debug(e)
             self.log.error('Copy file failed! Check debug log for detailed information')
@@ -148,13 +167,13 @@ class Copier:
             if local_file and os.path.isfile(local_file):
                 os.remove(local_file)
 
-    def _upload_obj(self, stream, key, org_size):
+    def _upload_obj(self, org_url, key, org_size):
         parts = int(org_size) // self.MULTI_PART_CHUNK_SIZE
         chunk_size = self.MULTI_PART_CHUNK_SIZE if parts < self.PARTS_LIMIT else int(org_size) // self.PARTS_LIMIT
-
         t_config = TransferConfig(multipart_threshold=self.MULTI_PART_THRESHOLD,
-                                  multipart_chunksize=chunk_size)
-        self.bucket._upload_file_obj(key, stream, t_config)
+                                    multipart_chunksize=chunk_size)
+        with open(org_url, 'rb') as stream:
+            self.bucket._upload_file_obj(key, stream, t_config)
         self.files_copied += 1
         self.log.info(f'Copying file {key} SUCCEEDED!')
         return self.bucket.get_object_size(key)

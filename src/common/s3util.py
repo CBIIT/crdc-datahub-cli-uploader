@@ -5,23 +5,26 @@ import botocore
 from botocore.exceptions import ClientError
 
 from bento.common.utils import get_logger, get_md5_hex_n_base64, remove_leading_slashes
+from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
 SINGLE_PUT_LIMIT = 4_500_000_000
 
 class S3Bucket:
-    def __init__(self, bucket, creadentials):
+    def __init__(self):
+        self.log = get_logger('S3 Bucket')
+
+    def set_s3_client(self, bucket, creadentials):
         self.bucket_name = bucket
         self.credential = creadentials
         session = boto3.session.Session(
-            aws_access_key_id=creadentials['AccessKeyId'],
-            aws_secret_access_key=creadentials['SecretAccessKey'],
-            aws_session_token=creadentials['SessionToken']
+            aws_access_key_id=creadentials[ACCESS_KEY_ID],
+            aws_secret_access_key=creadentials[SECRET_KEY],
+            aws_session_token=creadentials[SESSION_TOKEN]
         )
         self.client = session.client('s3')
         self.s3 = session.resource('s3')
         self.bucket = self.s3.Bucket(bucket)
-        self.log = get_logger('S3 Bucket')
 
     def _put_file_obj(self, key, data, md5_base64):
         return self.bucket.put_object(Key=key,

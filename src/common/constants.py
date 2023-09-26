@@ -26,3 +26,10 @@ UPLOAD_STATUS ="upload_status"
 #S3
 BUCKET = "bucketName"
 FILE_PREFIX = "filePrefix" #bucket folders
+
+#credential
+TEMP_CREDENTIAL = "credentials"
+ACCESS_KEY_ID = "accessKeyId"
+SECRET_KEY = "secretAccessKey"
+SESSION_TOKEN = "sessionToken"
+

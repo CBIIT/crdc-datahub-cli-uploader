@@ -11,7 +11,7 @@ from copier import Copier
 from upload_config import Config
 from bento.common.s3 import upload_log_file
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-    SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD,S3_BUCKET, UPLOAD_STATUS
+    SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD,S3_BUCKET, UPLOAD_STATUS, TEMP_CREDENTIAL, FILE_PREFIX
 from common.utils import clean_up_strs, clean_up_key_value
 
 if LOG_PREFIX not in os.environ:
@@ -69,15 +69,20 @@ class FileLoader:
         dryrun=False
         overwrite=False
 
-
-        self.prefix = f'{configs[SUBMISSION_ID]}/{UPLOAD_TYPES[0]}' # prefix is submissionId/file
+        self.configs = configs
+        if configs.get(FILE_PREFIX):
+            self.prefix = configs.get(FILE_PREFIX)
+        else:
+            self.prefix =  f'{configs[SUBMISSION_ID]}/{UPLOAD_TYPES[0]}' # prefix is submissionId/file
         self.bucket_name = configs[S3_BUCKET]
+        self.credential = configs[TEMP_CREDENTIAL]
         self.pre_manifest = configs[PRE_MANIFEST]
         self.file_info_list = file_list
         self.field_names = field_names
         self.copier = None
         self.count = len(file_list)
         self.domain = "caninecommons.cancer.gov"
+
 
         if not isinstance(retry, int) and retry > 0:
             raise ValueError(f'Invalid retry value: {retry}')
@@ -166,7 +171,7 @@ class FileLoader:
           :return:
         """
 
-        self.copier = Copier(self.bucket_name, self.prefix)
+        self.copier = Copier(self.bucket_name, self.prefix, self.configs)
 
         file_queue = deque(self._read_pre_manifest())
         indexd_manifest = self.get_indexd_manifest_name(self.pre_manifest)
