@@ -14,11 +14,11 @@ Major implemented modules/classred in src dir:
     This is the entry point of the command line interface.  It controls the workflow and dispatchs different requests to designated modules/classes.
 
 2) upload_config.py
-    This class manages request arguments and configurations.  It receives user's arguments and validate these arguments and hold thenm in a dictionary, data.
+    This class manages request arguments and configurations.  It receives user's arguments, validate these arguments and hold them in a dictionary.
 
 3) file_validator.py
-    This class validates 1) study files by checking file size and md5; 2) metadata files by checking if file existing the the data folder defined by user.
-    During the validation, it also constracts a dictionary to records, file path, file size, validate result, validateion message for study files.  For metadata files, it constructs a dictionary only with file path and file size.
+    This class validates 1) study files by checking file size and md5; 2) metadata files by checking if file existing in the data folder defined by user.
+    During the validation, it also constracts a dictionary to record file path, file size, validate result, validateion message for study files.  For metadata files, it constructs a dictionary only with file path and file size.
 
 4) common/graphql_client.py
     This module hosts three clients for three graphql APIs, createTempCredential, createBatch, updateBatch.
