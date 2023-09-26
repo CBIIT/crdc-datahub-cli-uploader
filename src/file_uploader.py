@@ -11,7 +11,7 @@ from copier import Copier
 from upload_config import Config
 from bento.common.s3 import upload_log_file
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-    SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD,S3_BUCKET, UPLOAD_STATUS, TEMP_CREDENTIAL, FILE_PREFIX
+    SUBMISSION_ID, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD,S3_BUCKET, UPLOAD_STATUS, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES
 from common.utils import clean_up_strs, clean_up_key_value
 
 if LOG_PREFIX not in os.environ:
@@ -64,10 +64,10 @@ class FileLoader:
         :param file_list: list of file path, size
 
         """
-        retry=3
-        verify_md5=False
-        dryrun=False
-        overwrite=False
+        retry = configs.get(RETRIES, 3)  # default is 3
+        verify_md5 = False # verified when validating files
+        dryrun = False
+        overwrite = False
 
         self.configs = configs
         if configs.get(FILE_PREFIX):

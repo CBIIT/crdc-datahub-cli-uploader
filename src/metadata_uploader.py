@@ -24,7 +24,7 @@ if LOG_PREFIX not in os.environ:
 #   target bucket:
 
 
-class FileLoader:
+class DataFileLoader:
     GUID = 'GUID'
     MD5 = 'md5'
     SIZE = 'size'
@@ -57,7 +57,7 @@ class FileLoader:
     VERIFY_MD5 = 'verify_md5'
     LOG_UPLOAD_DIR = 'upload_log_dir'
 
-    def __init__(self, configs, file_list, field_names):
+    def __init__(self, configs, file_list):
         """"
 
         :param configs: all configurations for file uploading
@@ -74,7 +74,6 @@ class FileLoader:
         self.bucket_name = configs[S3_BUCKET]
         self.pre_manifest = configs[PRE_MANIFEST]
         self.file_info_list = file_list
-        self.field_names = field_names
         self.copier = None
         self.count = len(file_list)
         self.domain = "caninecommons.cancer.gov"

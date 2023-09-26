@@ -16,6 +16,7 @@ SUBMISSION_ID = "submission"
 PRE_MANIFEST = "manifest"
 FILE_DIR = "data"
 S3_BUCKET = "bucket"
+RETRIES = "retries"
 
 #file validation 
 FILE_INVALID_REASON = "invalid_reason"

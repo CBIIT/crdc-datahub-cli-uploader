@@ -11,4 +11,6 @@ Config:
     data: 
     #uploading intention, valid value in [“New”, “Update”, “Delete”],
     intention: 
+    #file uploading retries
+    retries:
    

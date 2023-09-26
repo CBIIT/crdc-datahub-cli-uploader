@@ -17,5 +17,7 @@ Config:
     size-field:
     #file md5 header name in the manifest file, default is md5sum
     md5-field:
+    #file uploading retries
+    retries:
 
 

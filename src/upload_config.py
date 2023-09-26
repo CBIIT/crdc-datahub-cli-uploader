@@ -2,7 +2,7 @@ import argparse
 import os
 import yaml
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-    API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD
+    API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, RETRIES
 from bento.common.utils import get_logger
 from common.utils import clean_up_key_value
 
@@ -15,7 +15,8 @@ Command line arguments / configuration
 --submission, submission ID, required
 --type, valid value in [“file”, “metadata”], required
 --data, folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
---config, configuration file path, can potentially contain all above parameters, optional{}
+--config, configuration file path, can potentially contain all above parameters, optional {}
+--retries, file uploading retries, integer, optional, default value is 3
 Following arguments are needed to read important data from manifest, conditional required when type = “file”
 
 --manifest, path to manifest file, conditional required when type = “file”
@@ -48,7 +49,7 @@ class Config():
         parser.add_argument('-n', '--name-field', help='header file name in manifest, optional, default value is "file_name"')
         parser.add_argument('-s', '--size-field', help='header file size in manifest, optional, default value is "file_size"')
         parser.add_argument('-m', '--md5-field', help='header file size nin manifest, optional, default value is "md5sum"')
-
+        parser.add_argument('-r', '--retries', help='file uploading retries, optional, default value is 3')
         #args for metadata type
         parser.add_argument('-i', '--intention,', help='valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”')
 
@@ -109,8 +110,6 @@ class Config():
             self.log.critical(f'{type} is not valid uploading type!')
             return False
         else:
-            # print(UPLOAD_TYPES[0], "first type")
-            # print(UPLOAD_TYPES[1], "second type")
             if type == UPLOAD_TYPES[0]: #file
                 #check manifest
                 manifest = self.data.get(PRE_MANIFEST)

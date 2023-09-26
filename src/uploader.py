@@ -11,7 +11,7 @@ from common.graphql_client import APIInvoker
 from upload_config import Config, UPLOAD_HELP
 from file_validator import FileValidator
 from file_uploader import FileLoader
-from data_loader import DataLoader
+from metadata_uploader import DataFileLoader
 
 if LOG_PREFIX not in os.environ:
     os.environ[LOG_PREFIX] = 'Uploader Main'
@@ -77,7 +77,7 @@ def controller():
         result = loader.upload()
         #print(result)
     elif config.data.get(UPLOAD_TYPE) == UPLOAD_TYPES[1]: #metadata
-        loader = DataLoader(validator.fileList)
+        loader = DataFileLoader(configs, validator.fileList)
         result = loader.load()
     else: 
         log.error("Failed to upload files: can't upload files to bukect!")
@@ -85,7 +85,6 @@ def controller():
         return
     
     #step 5: update the batch
-    # batch = {} #API is not ready for integration
     # if apiInvoker.update_bitch(validator.fileList):
     #     batch = apiInvoker.batch
     # else:
