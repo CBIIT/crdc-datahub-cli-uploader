@@ -101,7 +101,17 @@ class Config():
         #         self.log.critical(f'submission Id is not integer!')
         #     else:
         #         self.data[SUBMISSION_ID] =int(submissionId) 
-        
+
+        retry = self.data.get(RETRIES, 3) #default value is 3
+        if isinstance(retry, str):
+            if not retry.isdigit():
+                self.log.critical(f'retries is not integer!')
+                return False
+            else:
+                self.data[retry] =int(retry) 
+        else:
+            self.data[RETRIES] =int(retry) 
+
         type = self.data.get(UPLOAD_TYPE)
         if type is None:
             self.log.critical(f'upload type is required!')

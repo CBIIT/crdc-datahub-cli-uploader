@@ -64,12 +64,13 @@ class FileLoader:
         :param file_list: list of file path, size
 
         """
-        retry = configs.get(RETRIES, 3)  # default is 3
+        
         verify_md5 = False # verified when validating files
         dryrun = False
         overwrite = False
 
         self.configs = configs
+        self.retry= configs.get(RETRIES)
         if configs.get(FILE_PREFIX):
             self.prefix = configs.get(FILE_PREFIX)
         else:
@@ -82,11 +83,7 @@ class FileLoader:
         self.copier = None
         self.count = len(file_list)
         self.domain = "caninecommons.cancer.gov"
-
-
-        if not isinstance(retry, int) and retry > 0:
-            raise ValueError(f'Invalid retry value: {retry}')
-        self.retry = retry
+        
         if not isinstance(overwrite, bool):
             raise TypeError(f'Invalid overwrite value: {overwrite}')
         self.overwrite = overwrite

@@ -29,7 +29,7 @@ def controller():
     config = Config()
     if not config.validate():
         log.error("Failed to upload files: missing required valid parameter(s)!")
-        print("Failed to upload files: missing required valid parameter(s)!  Please check log file in tmp folder for details.")
+        print("Failed to upload files: invalid parameter(s)!  Please check log file in tmp folder for details.")
         return
 
     #step 2: validate file or metadata
