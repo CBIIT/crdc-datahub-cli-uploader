@@ -6,7 +6,6 @@ import os
 import sys
 from bento.common.utils import get_logger, LOG_PREFIX
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, S3_BUCKET, API_URL, SUBMISSION_ID, INTENTION, BUCKET, FILE_PREFIX, TEMP_CREDENTIAL
-from common.s3util import get_temp_creadential
 from common.graphql_client import APIInvoker
 from upload_config import Config, UPLOAD_HELP
 from file_validator import FileValidator
