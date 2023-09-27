@@ -27,7 +27,7 @@ Major implemented modules/classred in src dir:
     This utility class is for access designated s3 bucket based on temp credetails and upload files to the bucket.
 
 6) file_uploader.py
-    This class is for upload valid study files from local to S3 bucket.
+    This class is for upload valid study files (big files) and metadata files (small files) from local to S3 bucket.
 
 
 
