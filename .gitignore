@@ -139,8 +139,5 @@ backup/
 **/.vscode/
 **/.DS_Store
 
-#bento frmework
-**/bento/
-
 #config files for testing
 **/configs/

@@ -5,7 +5,7 @@ import os
 import glob
 import json
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-    TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON
+    TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON, FILE_PATH
 from common.utils import clean_up_key_value, clean_up_strs
 from bento.common.utils import get_logger, get_md5
 
@@ -23,7 +23,7 @@ class FileValidator:
         self.uploadType = configs.get(UPLOAD_TYPE)
         self.file_dir = configs.get(FILE_DIR)
         self.pre_manifest = configs.get(PRE_MANIFEST)
-        self.fileList = [] #list of files object {file_name, file_size, invalid_reason}
+        self.fileList = [] #list of files object {file_name, file_path, file_size, invalid_reason}
         self.log = get_logger('File_Validator')
 
     def validate(self):
@@ -43,8 +43,9 @@ class FileValidator:
             
             for filepath in file_list:
                 size = os.path.getsize(filepath)
+                filename = os.path.basename(filepath)
                 #metadata file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None}
-                self.fileList.append({FILE_NAME_DEFAULT:filepath, FILE_SIZE_DEFAULT: size})
+                self.fileList.append({FILE_NAME_DEFAULT:filename, FILE_PATH: filepath, FILE_SIZE_DEFAULT: size})
 
         elif self.uploadType == UPLOAD_TYPES[0]: #file
             if not os.path.isfile(self.pre_manifest):
@@ -68,28 +69,28 @@ class FileValidator:
             if not os.path.isfile(file_path):
                 invalid_reason += f"File {file_path} does not exist!"
                 #file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None, FILE_INVALID_REASON: None}
-                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, FILE_INVALID_REASON: invalid_reason})
+                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, FILE_INVALID_REASON: invalid_reason})
                 continue
             
             file_size = os.path.getsize(file_path)
             if file_size != size_info:
                 invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifet {info[FILE_SIZE_DEFAULT]}!"
-                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
+                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
                 continue
 
             md5_info = info[MD5_DEFAULT] 
             if not md5_info:
                 invalid_reason += f"MD5 of {info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
-                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, FILE_INVALID_REASON: invalid_reason})
+                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, FILE_INVALID_REASON: invalid_reason})
                 continue
             #calculte file md5
             md5sum = get_md5(file_path)
             if md5_info != md5sum:
                 invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifet {md5_info}!"
-                self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, FILE_INVALID_REASON: invalid_reason})
+                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, FILE_INVALID_REASON: invalid_reason})
                 continue
 
-            self.fileList.append({FILE_NAME_DEFAULT:file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, FILE_INVALID_REASON: None})
+            self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, FILE_INVALID_REASON: None})
 
         return True
     

@@ -1,54 +1,15 @@
 #!/bin/env python3
 import os
-import re
 
 from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
-import requests
+from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, get_md5_hex_n_base64
 
 from common.graphql_client import APIInvoker
-
-from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, stream_download, get_md5
 from common.s3util import S3Bucket
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-    TOKEN, SUBMISSION_ID, TEMP_CREDENTIAL, S3_BUCKET
-
-
-def _is_valid_url(org_url):
-    return re.search(r'^[^:/]+://', org_url)
-
-
-def _is_local(org_url):
-    return org_url.startswith('file://')
-
-
-def _get_local_path(org_url):
-    if _is_local(org_url):
-        return org_url.replace('file://', '')
-    else:
-        raise ValueError(f'{org_url} is not a local file!')
-
-
-def _get_org_md5(org_url, local_file):
-    """
-    Get original MD5, if adapter can't get it, calculate it from original file, download if necessary
-    :param org_url:
-    :return:
-    """
-    if _is_local(org_url):
-        file_path = _get_local_path(org_url)
-        return get_md5(file_path)
-    else:
-        # Download to local and calculate MD5
-        stream_download(org_url, local_file)
-        if not os.path.isfile(local_file):
-            raise Exception(f'Download file {org_url} to local failed!')
-        return get_md5(local_file)
-
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH
 
 class Copier:
-    adapter_attrs = ['load_file_info', 'clear_file_info', 'get_org_url', 'get_file_name', 'get_org_md5',
-                     'filter_fields', 'get_fields', 'get_acl', 'get_org_size']
 
     TRANSFER_UNIT_MB = 1024 * 1024
     MULTI_PART_THRESHOLD = 100 * TRANSFER_UNIT_MB
@@ -58,7 +19,6 @@ class Copier:
     # keys for copy result dict
     STATUS = 'status'
     SIZE = 'size'
-    MD5 = 'md5'
     KEY = 'key'
     NAME = 'name'
     FIELDS = 'fields'
@@ -87,6 +47,7 @@ class Copier:
         self.files_exist_at_dest = 0
         self.files_copied = 0
         self.files_not_found = set()
+        self.type = configs.get(UPLOAD_TYPE)
 
     def refreshToken(self):
         apiInvoker = APIInvoker(self.configs)
@@ -104,31 +65,25 @@ class Copier:
         if prefix != self.prefix:
             self.prefix = prefix
 
-    def copy_file(self, file_info, overwrite, dryrun, field_names, verify_md5=False):
+    def copy_file(self, file_info, overwrite, dryrun):
         """
         Copy a file to S3 bucket
         :param file_info: dict that has file information
         :param overwrite: overwrite file in S3 bucket even existing file has same size
         :param dryrun: only do preliminary check, don't copy file
-        :param verify_md5: verify file size and MD5 in file_info against original file
         :return: dict
         """
-        local_file = None
         try:
-            org_url = file_info[FILE_NAME_DEFAULT]
-            file_name = os.path.basename(org_url)
+            org_url = file_info[FILE_PATH]
+            file_name = file_info[FILE_NAME_DEFAULT]
             self.log.info(f'Processing {org_url}')
             key = f'{self.prefix}/{file_name}'
             org_size = file_info[FILE_SIZE_DEFAULT]
             self.log.info(f'Original file size: {format_bytes(org_size)}.')
-            org_md5 = file_info[MD5_DEFAULT]
-            self.log.info(f'Original MD5 {org_md5}')
 
             succeed = {self.STATUS: True,
-                       self.MD5: org_md5,
                        self.NAME: file_name,
                        self.KEY: key,
-                       self.FIELDS: field_names,
                        self.ACL: None,
                        self.SIZE: org_size
                        }
@@ -143,8 +98,10 @@ class Copier:
                 return succeed
 
             self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key} ...')
-            # Original file is local
-            dest_size = self._upload_obj(org_url, key, org_size)
+            if self.type == UPLOAD_TYPES[0]: #study files upload ( big files)
+                dest_size = self._upload_obj(org_url, key, org_size)
+            else: #for small file such as metadata file
+                dest_size = self._put_obj(org_url, key)
             if dest_size != org_size:
                 self.log.error(f'Copy failed: destination file size is different from original!')
                 return {self.STATUS: False}
@@ -163,9 +120,6 @@ class Copier:
             self.log.debug(e)
             self.log.error('Copy file failed! Check debug log for detailed information')
             return {self.STATUS: False}
-        finally:
-            if local_file and os.path.isfile(local_file):
-                os.remove(local_file)
 
     def _upload_obj(self, org_url, key, org_size):
         parts = int(org_size) // self.MULTI_PART_CHUNK_SIZE
@@ -177,23 +131,12 @@ class Copier:
         self.files_copied += 1
         self.log.info(f'Copying file {key} SUCCEEDED!')
         return self.bucket.get_object_size(key)
-
-    def _file_exists(self, org_url):
-        if _is_local(org_url):
-            file_path = _get_local_path(org_url)
-            if not os.path.isfile(file_path):
-                self.log.error(f'"{file_path}" is not a file!')
-                self.files_not_found.add(org_url)
-                return False
-            else:
-                return True
-        else:
-            with requests.head(org_url) as r:
-                if r.ok:
-                    return True
-                elif r.status_code == 404:
-                    self.log.error(f'File not found: {org_url}!')
-                    self.files_not_found.add(org_url)
-                else:
-                    self.log.error(f'Head file error - {r.status_code}: {org_url}')
-                return False
+    
+    def _put_obj(self, org_url, key):
+        md5_obj = get_md5_hex_n_base64(org_url)
+        md5_base64 = md5_obj['base64']
+        with open(org_url, 'rb') as data:
+            self.bucket._put_file_obj(key, data, md5_base64)
+        self.files_copied += 1
+        self.log.info(f'Copying file {key} SUCCEEDED!')
+        return self.bucket.get_object_size(key)

@@ -4,14 +4,13 @@
 #############################
 import os
 import sys
-from bento.common.utils import get_logger, get_log_file, get_uuid, LOG_PREFIX, UUID, get_time_stamp, removeTrailingSlash, load_plugin
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, S3_BUCKET, FILE_INVALID_REASON, API_URL, SUBMISSION_ID, INTENTION, BUCKET, FILE_PREFIX, TEMP_CREDENTIAL
+from bento.common.utils import get_logger, LOG_PREFIX
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, S3_BUCKET, API_URL, SUBMISSION_ID, INTENTION, BUCKET, FILE_PREFIX, TEMP_CREDENTIAL
 from common.s3util import get_temp_creadential
 from common.graphql_client import APIInvoker
 from upload_config import Config, UPLOAD_HELP
 from file_validator import FileValidator
 from file_uploader import FileLoader
-from metadata_uploader import DataFileLoader
 
 if LOG_PREFIX not in os.environ:
     os.environ[LOG_PREFIX] = 'Uploader Main'
@@ -45,7 +44,8 @@ def controller():
     #step 3: create a batch
     apiInvoker = APIInvoker(configs)
     # newBatch = {}  #API is not ready for integration
-    # if apiInvoker.create_bitch():
+    # file-array = []
+    # if apiInvoker.create_bitch(file-array):
     #     newBatch = apiInvoker.new_batch
     #     configs[S3_BUCKET] = newBatchBUCKET]
     #     configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
@@ -56,7 +56,7 @@ def controller():
     #     print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
     #     return
     configs[S3_BUCKET] = "crdcdh-test-submission" #test code 
-    configs[FILE_PREFIX] = "123456/file" if configs.get(UPLOAD_TYPE) == UPLOAD_TYPES[0] else "123456/metadat" #test code 
+    configs[FILE_PREFIX] = "123456/file" if upload_type == UPLOAD_TYPES[0] else "123456/metadata" #test code 
 
     #step 4: get aws sts temp credential for uploading files to s3 bucket.
     if apiInvoker.get_temp_credential():
@@ -69,20 +69,16 @@ def controller():
         return
 
     #step 5: upload all files to designated s3 bukect or load all metadata into DB
-    if configs.get(UPLOAD_TYPE) == UPLOAD_TYPES[0]: #file
-        field_names = validator.field_names #name array
-        valid_file_list = [file for file in file_list if not file[FILE_INVALID_REASON] ]
-        invalid_file_list = [file for file in file_list if file[FILE_INVALID_REASON]]
-        loader = FileLoader(configs, valid_file_list, field_names)
-        result = loader.upload()
-        #print(result)
-    elif config.data.get(UPLOAD_TYPE) == UPLOAD_TYPES[1]: #metadata
-        loader = DataFileLoader(configs, validator.fileList)
-        result = loader.load()
-    else: 
+    loader = FileLoader(configs, file_list)
+    result = loader.upload()
+    #print(result)
+    if not result:
         log.error("Failed to upload files: can't upload files to bukect!")
         print("Failed to upload files: can't upload files to bukect! Please check log file in tmp folder for details.")
         return
+    else:
+        #write filelist to tsv file and save to result dir
+        print("File uploading completed!")
     
     #step 5: update the batch
     # if apiInvoker.update_bitch(validator.fileList):

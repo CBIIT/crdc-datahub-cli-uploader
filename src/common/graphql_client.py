@@ -56,14 +56,14 @@ class APIInvoker:
 
 
     #2) create upload batch
-    def create_bitch(self, file_list):
+    def create_bitch(self, file_array):
         self.new_batch = {}
         body = f"""
         mutation {{
             createBatch (
                 submissionID: \"{self.submissionId}\", 
                 metadataIntention: \"{self.intention}\", 
-                files: {file_list}
+                files: {file_array}
             ){{
                 _id,
                 displayID,

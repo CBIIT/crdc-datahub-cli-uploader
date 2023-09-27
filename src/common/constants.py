@@ -6,6 +6,7 @@ INTENTION = "intention"
 INTENTIONS =  ["New", "Update", "Delete"]
 FILE_NAME_FIELD = "name-field"
 FILE_NAME_DEFAULT = "file_name"  #match data model file name 
+FILE_PATH = "file_path"
 FILE_SIZE_FIELD = "size-field"
 FILE_SIZE_DEFAULT = "file_size"  #match data model file size name
 FILE_MD5_FIELD = "md5-field"
