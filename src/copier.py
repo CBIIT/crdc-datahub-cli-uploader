@@ -99,10 +99,8 @@ class Copier:
                 return succeed
 
             self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key} ...')
-            if self.type == UPLOAD_TYPES[0] or org_size > self.SINGLE_PUT_LIMIT: #study files upload ( big files)
-                dest_size = self._upload_obj(org_url, key, org_size)
-            else: #for small file such as metadata file
-                dest_size = self._put_obj(org_url, key)
+           
+            dest_size = self._upload_obj(org_url, key, org_size)
             if dest_size != org_size:
                 self.log.error(f'Copy failed: destination file size is different from original!')
                 return {self.STATUS: False}
@@ -123,21 +121,20 @@ class Copier:
             return {self.STATUS: False}
 
     def _upload_obj(self, org_url, key, org_size):
-        parts = int(org_size) // self.MULTI_PART_CHUNK_SIZE
-        chunk_size = self.MULTI_PART_CHUNK_SIZE if parts < self.PARTS_LIMIT else int(org_size) // self.PARTS_LIMIT
-        t_config = TransferConfig(multipart_threshold=self.MULTI_PART_THRESHOLD,
-                                    multipart_chunksize=chunk_size)
-        with open(org_url, 'rb') as stream:
-            self.bucket.upload_file_obj(key, stream, t_config)
-        self.files_copied += 1
-        self.log.info(f'Copying file {key} SUCCEEDED!')
-        return self.bucket.get_object_size(key)
-    
-    def _put_obj(self, org_url, key):
-        md5_obj = get_md5_hex_n_base64(org_url)
-        md5_base64 = md5_obj['base64']
-        with open(org_url, 'rb') as data:
-            self.bucket.put_file_obj(key, data, md5_base64)
+        
+        if self.type == UPLOAD_TYPES[0] or org_size > self.SINGLE_PUT_LIMIT: #study files upload (big files)
+            parts = int(org_size) // self.MULTI_PART_CHUNK_SIZE
+            chunk_size = self.MULTI_PART_CHUNK_SIZE if parts < self.PARTS_LIMIT else int(org_size) // self.PARTS_LIMIT
+            t_config = TransferConfig(multipart_threshold=self.MULTI_PART_THRESHOLD,
+                                        multipart_chunksize=chunk_size)
+            with open(org_url, 'rb') as stream:
+                self.bucket.upload_file_obj(key, stream, t_config)
+        else: #small file
+            md5_obj = get_md5_hex_n_base64(org_url)
+            md5_base64 = md5_obj['base64']
+            with open(org_url, 'rb') as data:
+                self.bucket.put_file_obj(key, data, md5_base64)
+
         self.files_copied += 1
         self.log.info(f'Copying file {key} SUCCEEDED!')
         return self.bucket.get_object_size(key)
