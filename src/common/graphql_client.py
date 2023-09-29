@@ -4,6 +4,7 @@ import requests
 import json
 from bento.common.utils import get_logger
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, API_URL, SUBMISSION_ID, INTENTION, TOKEN
+from common.utils import get_exception_msg
 
 class APIInvoker:
     def __init__(self, configs):
@@ -13,6 +14,7 @@ class APIInvoker:
         self.submissionId = configs.get(SUBMISSION_ID)
         self.intention = configs.get(INTENTION)
         self.log = get_logger('GraphQL API')
+        self.type = configs.get(UPLOAD_TYPE)
 
     #to do 
     #1) get sts temp creadential for file/metadata uploading to S3 bucket
@@ -27,8 +29,6 @@ class APIInvoker:
             }}
         }}
         """
-        #print(body)
-        # print(self.headers)
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
@@ -51,32 +51,32 @@ class APIInvoker:
 
         except Exception as e:
             self.log.debug(e)
-            self.log.exception('Get temp creadential failed! Check debug log for detailed information')
+            self.log.exception(f'Get temp creadential failed! {get_exception_msg()}')
             return False
 
 
     #2) create upload batch
     def create_bitch(self, file_array):
-        self.new_batch = {}
+        self.new_batch = None
+        file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
+        intention = "null" if not self.intention else "\"" + self.intention + "\"" 
         body = f"""
         mutation {{
             createBatch (
                 submissionID: \"{self.submissionId}\", 
-                metadataIntention: \"{self.intention}\", 
+                type: \"{self.type}\", 
+                metadataIntention: {intention} 
                 files: {file_array}
             ){{
                 _id,
-                displayID,
                 submissionID,
                 bucketName,
                 filePrefix,
                 type,
                 metadataIntention,
                 fileCount,
-                files,
                 status,
-                createdAt,
-                updatedAt
+                createdAt
             }}
         }}
         """
@@ -86,28 +86,28 @@ class APIInvoker:
             self.log.info("create_bitch response status code: ", response.status_code)
             if status == 200: 
                 results = json.loads(response.content)
-                if results.get("data"):
-                    self.new_batch = results.get("data").get("createBatch")
-                    return True
+                if results.get("errors"):
+                        self.log.error(f'Create batch failed: {results.get("errors")[0].get("message")}!') 
                 else:
-                    if results.get("errors"):
-                        self.log.error(f'Create batch failed: {results.get("errors").get("message")}!')  
+                    self.new_batch = results.get("data").get("createBatch")
+                    if self.new_batch:
+                        return True
                     else:
                         self.log.error('Create batch failed!')
-                    return False
-               
+                        return False
             else:
                 self.log.error(f'Create batch failed with status code: {status}')
                 return False
             
         except Exception as e:
-            self.log.debug(e)
-            self.log.exception('Create batch failed! Check debug log for detailed information')
+            #self.log.debug(e)
+            self.log.exception(f'Create batch failed! {get_exception_msg()}')
             return False
 
     #3) update upload batch
     def update_bitch(self, batchID, uploaded_files):
-        self.batch = {}
+        self.batch = None
+        uploaded_files = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors")
         body = f"""
         mutation {{
             updateBatch (
@@ -118,10 +118,9 @@ class APIInvoker:
                 _id,
                 displayID,
                 submissionID,
-                type, # [metadata, file]
-                metadataIntention,# [New, Update, Delete], Update is meant for "Update or insert", metadata only! file batches are always treated as Update
+                type,
+                metadataIntention,
                 fileCount,
-                files,
                 status,
                 createdAt,
                 updatedAt
@@ -134,22 +133,21 @@ class APIInvoker:
             self.log.info("create_bitch response status code: ", response.status_code)
             if status == 200: 
                 results = json.loads(response.content)
-                if results.get("data"):
-                    self.new_batch = results.get("data").get("updateBatch")
-                    return True
+                if results.get("errors"):
+                        self.log.error(f'Update batch failed: {results.get("errors")[0].get("message")}!') 
                 else:
-                    if results.get("errors"):
-                        self.log.error(f'Update batch failed: {results.get("errors").get("message")}!')  
+                    self.batch = results.get("data").get("updateBatch")
+                    if self.batch:
+                        return True
                     else:
                         self.log.error('Update batch failed!')
-                    return False
-                
+                        return False
             else:
                 self.log.error(f'Update batch failed with status code: {status}')
                 return False
         except Exception as e:
             self.log.debug(e)
-            self.log.error('Update batch failed! Check debug log for detailed information')
+            self.log.error(f'Update batch failed! {get_exception_msg()}')
             return False
 
 

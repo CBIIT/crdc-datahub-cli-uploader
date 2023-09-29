@@ -7,8 +7,8 @@ from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, ge
 
 from common.graphql_client import APIInvoker
 from common.s3util import S3Bucket
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH
-
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, ERRORS
+from common.utils import get_exception_msg
 class Copier:
 
     TRANSFER_UNIT_MB = 1024 * 1024
@@ -107,17 +107,22 @@ class Copier:
 
             return succeed
         except ClientError as ce:
-            self.log.exception(f"Failed uploading file,{file_name} to {self.bucket_name}!", ce)
+            self.log.debug(ce)
+            self.log.exception(f"Failed uploading file,{file_name} to {self.bucket_name}! {get_exception_msg()}.")
             #handle temp credential expired error to refresh token for next file.
             if ce.response[u'Error'][u'Code'] == 'ExpiredToken':
-                self.log.error(u"AWS Token expired!")
+                self.log.exception(f'Copy file failed, AWS Token expired! {get_exception_msg()}.')
+                file_info[ERRORS] = [f'Copy file failed, AWS Token expired!! {get_exception_msg()}']
                 if self.refreshToken(): 
                     self.bucket.set_s3_client(self.bucket_name, self.configs[TEMP_CREDENTIAL])
+            else:
+                file_info[ERRORS] = [f'Copy file failed with S3 client error! {get_exception_msg()}.']
 
             return {self.STATUS: False}
         except Exception as e:
             self.log.debug(e)
-            self.log.error('Copy file failed! Check debug log for detailed information')
+            self.log.exception('Copy file failed! Check debug log for detailed information.')
+            file_info[ERRORS] = [f"Copy file failed! {get_exception_msg()}."]
             return {self.STATUS: False}
 
     def _upload_obj(self, org_url, key, org_size):

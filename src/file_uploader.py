@@ -10,7 +10,7 @@ from bento.common.utils import get_logger, get_log_file, get_uuid, LOG_PREFIX, U
 from copier import Copier
 from upload_config import Config
 from bento.common.s3 import upload_log_file
-from common.constants import UPLOAD_TYPE, INTENTION, INTENTIONS, FILE_NAME_DEFAULT,  \
+from common.constants import UPLOAD_TYPE, INTENTION, INTENTIONS, FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  \
     SUBMISSION_ID, PRE_MANIFEST, S3_BUCKET, UPLOAD_STATUS, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES,FILE_INVALID_REASON
 from common.utils import clean_up_strs, clean_up_key_value
 
@@ -85,22 +85,19 @@ class FileLoader:
             job = file_queue.popleft()
             file_info = job[self.INFO]
             #skip invalid file
-            file_skip = False if not file_info.get(FILE_INVALID_REASON) else True
+            file_skip = False if not file_info.get(SUCCEEDED) else True
             job[self.TTL] -= 1
             if file_skip == False:
                 self.files_processed += 1
-                try:
-                    result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
-                    if result.get(Copier.STATUS):
-                        file_info[UPLOAD_STATUS] = "Completed"
-                    else:
-                        self._deal_with_failed_file(job, file_queue)
-                except Exception as e:
-                    self.log.debug(e)
+                result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
+                if result.get(Copier.STATUS):
+                    file_info[SUCCEEDED] = True
+                    file_info[ERRORS] = None
+                else:
                     self._deal_with_failed_file(job, file_queue)
             else:
                 self.files_skipped += 1
-                file_info[UPLOAD_STATUS] = "Skipped"
+                file_info[SUCCEEDED] = False
 
         self.log.info(f'Files skipped: {self.files_skipped}')
         self.log.info(f'Files processed: {self.files_processed}')
@@ -119,5 +116,5 @@ class FileLoader:
             self.log.critical(f'Uploading file failure exceeded maximum retry times, abort!')
             self.files_failed += 1
             file_info = job[self.INFO]
-            file_info[UPLOAD_STATUS] = "Failed"
+            file_info[SUCCEEDED] = False
        

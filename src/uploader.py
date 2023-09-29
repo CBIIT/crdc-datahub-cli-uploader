@@ -4,8 +4,10 @@
 #############################
 import os
 import sys
+
 from bento.common.utils import get_logger, LOG_PREFIX
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, S3_BUCKET, API_URL, SUBMISSION_ID, INTENTION, BUCKET, FILE_PREFIX, TEMP_CREDENTIAL
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, S3_BUCKET, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, API_URL, SUBMISSION_ID, INTENTION, BATCH_BUCKET, \
+    BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL
 from common.graphql_client import APIInvoker
 from upload_config import Config, UPLOAD_HELP
 from file_validator import FileValidator
@@ -42,20 +44,19 @@ def controller():
     
     #step 3: create a batch
     apiInvoker = APIInvoker(configs)
-    # newBatch = {}  #API is not ready for integration
-    # file-array = []
-    # if apiInvoker.create_bitch(file-array):
-    #     newBatch = apiInvoker.new_batch
-    #     configs[S3_BUCKET] = newBatchBUCKET]
-    #     configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
-    #     if upload_type ==  UPLOAD_TYPES[1]:
-    #        configs["presignedUrls"] = newBatch["files"]
-    # else:
-    #     log.error("Failed to upload files: can't create new batch!")
-    #     print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
-    #     return
-    configs[S3_BUCKET] = "crdcdh-test-submission" #test code 
-    configs[FILE_PREFIX] = "123456/file" if upload_type == UPLOAD_TYPES[0] else "123456/metadata" #test code 
+    file_array = [{"fileName": item[FILE_NAME_DEFAULT], "size": item[FILE_SIZE_DEFAULT]} for item in file_list]
+    if apiInvoker.create_bitch(file_array):
+        newBatch = apiInvoker.new_batch
+        configs[S3_BUCKET] = newBatch.get(BATCH_BUCKET)
+        configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
+        configs[BATCH_ID] = newBatch.get(BATCH_ID)
+        configs[BATCH] = newBatch
+    else:
+        log.error("Failed to upload files: can't create new batch!")
+        print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
+        return
+    # configs[S3_BUCKET] = "crdcdh-test-submission" #test code 
+    # configs[FILE_PREFIX] = "123456/file" if upload_type == UPLOAD_TYPES[0] else "123456/metadata" #test code 
 
     #step 4: get aws sts temp credential for uploading files to s3 bucket.
     if apiInvoker.get_temp_credential():
@@ -80,6 +81,10 @@ def controller():
         print("File uploading completed!")
     
     #step 5: update the batch
+    #uploade_results: 
+    # fileName: String
+    # succeeded: Boolean
+    # errors: [String]
     # if apiInvoker.update_bitch(validator.fileList):
     #     batch = apiInvoker.batch
     # else:

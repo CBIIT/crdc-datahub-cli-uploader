@@ -25,13 +25,19 @@ FILE_INVALID_REASON = "invalid_reason"
 #upload
 UPLOAD_STATUS ="upload_status"
 
-#S3
-BUCKET = "bucketName"
+#Bacth
+BATCH_BUCKET = "bucketName"
 FILE_PREFIX = "filePrefix" #bucket folders
+BATCH = "batch"
+BATCH_ID = "_id"
+SUCCEEDED = "succeeded"
+ERRORS = "errors"
+
 
 #credential
 TEMP_CREDENTIAL = "credentials"
 ACCESS_KEY_ID = "accessKeyId"
 SECRET_KEY = "secretAccessKey"
 SESSION_TOKEN = "sessionToken"
+
 

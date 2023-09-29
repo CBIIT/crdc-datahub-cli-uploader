@@ -1,4 +1,5 @@
 
+import sys
 
 """ 
 clean_up_key_value(dict)
@@ -19,3 +20,7 @@ Removes leading and trailing spaces from header names
 def clean_up_strs(str_arr):
        
     return [item.strip() for item in str_arr]
+
+def get_exception_msg():
+    ex_type, ex_value, exc_traceback = sys.exc_info()
+    return f'{ex_type.__name__}: {ex_value}'
