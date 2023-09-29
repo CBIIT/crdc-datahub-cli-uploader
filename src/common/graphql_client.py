@@ -107,22 +107,20 @@ class APIInvoker:
     #3) update upload batch
     def update_bitch(self, batchID, uploaded_files):
         self.batch = None
-        uploaded_files = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors")
+        file_array = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors")
         body = f"""
         mutation {{
             updateBatch (
                 batchID: \"{batchID}\", 
-                files: {uploaded_files}
+                files: {file_array}
                 )
             {{
                 _id,
-                displayID,
                 submissionID,
                 type,
                 metadataIntention,
                 fileCount,
                 status,
-                createdAt,
                 updatedAt
             }}
         }}
@@ -147,7 +145,7 @@ class APIInvoker:
                 return False
         except Exception as e:
             self.log.debug(e)
-            self.log.error(f'Update batch failed! {get_exception_msg()}')
+            self.log.exception(f'Update batch failed! {get_exception_msg()}')
             return False
 
 

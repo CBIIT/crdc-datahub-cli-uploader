@@ -32,7 +32,9 @@ BATCH = "batch"
 BATCH_ID = "_id"
 SUCCEEDED = "succeeded"
 ERRORS = "errors"
-
+BATCH_CREATED = "createdAt"
+BATCH_UPDATED = "createdAt"
+BATCH_STATUS= "status"
 
 #credential
 TEMP_CREDENTIAL = "credentials"
