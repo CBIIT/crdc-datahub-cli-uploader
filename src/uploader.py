@@ -65,6 +65,7 @@ def controller():
     if not apiInvoker.get_temp_credential():
         log.error("Failed to upload files: can't get temp credential!")
         print("Failed to upload files: can't get temp credential! Please check log file in tmp folder for details.")
+        #set fileList for update batch
         file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": False, "errors": ["Failed to upload files: can't get temp credential!"]} for item in file_list]
     else:
         temp_credential = apiInvoker.cred
@@ -80,6 +81,7 @@ def controller():
         else:
             #write filelist to tsv file and save to result dir
             print("File uploading completed!")
+        #set fileList for update batch
         file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item[SUCCEEDED], "errors": item[ERRORS]} for item in file_list]
     
     #step 6: update the batch
@@ -100,6 +102,7 @@ def controller():
         #filter out file path in the file list
         file_list = [ {i:a[i] for i in a if i!=FILE_PATH} for a in file_list]
         dump_dict_to_tsv(file_list, file_path)
+        print(f"Uploading report is created at {file_path}!")
     except Exception as e:
         log.exception(f"Failed to dump uploading report files: {get_exception_msg()}.")
         print(f"Failed to dump uploading report files: {get_exception_msg()}.")

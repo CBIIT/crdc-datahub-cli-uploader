@@ -3,9 +3,9 @@
 import csv
 import os
 import glob
-import json
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,INTENTION, INTENTIONS, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-    TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON, FILE_PATH, SUCCEEDED, ERRORS
+
+from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
+     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON, FILE_PATH, SUCCEEDED, ERRORS
 from common.utils import clean_up_key_value, clean_up_strs, get_exception_msg
 from bento.common.utils import get_logger, get_md5
 

@@ -3,7 +3,7 @@
 import requests
 import json
 from bento.common.utils import get_logger
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, API_URL, SUBMISSION_ID, INTENTION, TOKEN
+from common.constants import UPLOAD_TYPE, API_URL, SUBMISSION_ID, INTENTION, TOKEN
 from common.utils import get_exception_msg
 
 class APIInvoker:
@@ -58,6 +58,7 @@ class APIInvoker:
     #2) create upload batch
     def create_bitch(self, file_array):
         self.new_batch = None
+        #adjust file list to match the graphql param.
         file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
         intention = "null" if not self.intention else "\"" + self.intention + "\"" 
         body = f"""
@@ -83,7 +84,7 @@ class APIInvoker:
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
-            self.log.info("create_bitch response status code: ", response.status_code)
+            self.log.info(f"update bitch response status code: {status}.")
             if status == 200: 
                 results = json.loads(response.content)
                 if results.get("errors"):
@@ -107,6 +108,7 @@ class APIInvoker:
     #3) update upload batch
     def update_bitch(self, batchID, uploaded_files):
         self.batch = None
+        #adjust file list to match the graphql param.
         file_array = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors")
         body = f"""
         mutation {{
@@ -128,7 +130,7 @@ class APIInvoker:
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
-            self.log.info("create_bitch response status code: ", response.status_code)
+            self.log.info(f"update bitch response status code: {status}.")
             if status == 200: 
                 results = json.loads(response.content)
                 if results.get("errors"):

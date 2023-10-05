@@ -10,22 +10,22 @@ from common.utils import clean_up_key_value
 #requirements of the ticket CRDCDH-13:
 UPLOAD_HELP = """
 Command line arguments / configuration
---api-url, API endpoint URL, required
---token, API token string, required
---submission, submission ID, required
---type, valid value in [“file”, “metadata”], required
---data, folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
---config, configuration file path, can potentially contain all above parameters, optional {}
---retries, file uploading retries, integer, optional, default value is 3
+-a --api-url, API endpoint URL, required
+-k --token, API token string, required
+-u --submission, submission ID, required
+-t --type, valid value in [“file”, “metadata”], required
+-d --data, folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
+-c --config, configuration file path, can potentially contain all above parameters, optional {}
+-r --retries, file uploading retries, integer, optional, default value is 3
 Following arguments are needed to read important data from manifest, conditional required when type = “file”
 
---manifest, path to manifest file, conditional required when type = “file”
---name-field
---size-field
---md5-field
+-m --manifest, path to manifest file, conditional required when type = “file”
+-n --name-field
+-s --size-field
+-m --md5-field
 Following argument is needed when type = "metadata"
 
---intention, valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”
+-i --intention, valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”
 CLI Argument and configuration module will
 
 validate and combine parameters from CLI and/or config file
@@ -96,11 +96,6 @@ class Config():
         if submissionId is None:
             self.log.critical(f'submission Id is required!')
             return False
-        # elif isinstance(submissionId, str):  requirement changed, the submit id is a string now
-        #     if not submissionId.isdigit():
-        #         self.log.critical(f'submission Id is not integer!')
-        #     else:
-        #         self.data[SUBMISSION_ID] =int(submissionId) 
 
         retry = self.data.get(RETRIES, 3) #default value is 3
         if isinstance(retry, str):
@@ -146,13 +141,16 @@ class Config():
 
             elif type == UPLOAD_TYPES[1]: #metadata
                 #check intention
-                intention = self.data.get(INTENTION)
-                if intention is None:
-                    self.log.critical(f'intention is required for metadata uploading!')
-                    return False
-                elif intention not in INTENTIONS:
-                    self.log.critical(f'{intention} is not a valid intention!')
-                    return False
+                # based on requirement in ticket 456, in MVPM2 the intention is always New
+                self.data[INTENTION] = INTENTIONS[0] #New
+        
+                # intention = self.data.get(INTENTION)
+                # if intention is None:
+                #     self.log.critical(f'intention is required for metadata uploading!')
+                #     return False
+                # elif intention not in INTENTIONS:
+                #     self.log.critical(f'{intention} is not a valid intention!')
+                #     return False
         
         filepath = self.data.get(FILE_DIR)
         if filepath is None:

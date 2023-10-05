@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-import os
 import boto3
-import botocore
 from botocore.exceptions import ClientError
 
-from bento.common.utils import get_logger, get_md5_hex_n_base64, remove_leading_slashes
+from bento.common.utils import get_logger
 from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'

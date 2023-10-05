@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-
-import csv
-import json
 import os
 from collections import deque
 
-from bento.common.sqs import Queue, VisibilityExtender
-from bento.common.utils import get_logger, get_log_file, get_uuid, LOG_PREFIX, UUID, get_time_stamp, removeTrailingSlash, load_plugin
+from bento.common.utils import get_logger, LOG_PREFIX
 from copier import Copier
-from upload_config import Config
 from bento.common.s3 import upload_log_file
-from common.constants import UPLOAD_TYPE, INTENTION, INTENTIONS, FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  \
-    SUBMISSION_ID, PRE_MANIFEST, S3_BUCKET, UPLOAD_STATUS, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES,FILE_INVALID_REASON
+from common.constants import UPLOAD_TYPE, FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  \
+    SUBMISSION_ID, PRE_MANIFEST, S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES
 from common.utils import clean_up_strs, clean_up_key_value
 
 if LOG_PREFIX not in os.environ:
