@@ -9,7 +9,7 @@ The application is consist of multiple python modules/classes to support mutiple
 2) Validate metadata by checking data models.
 3) upload both files and metadata files to S3 bucket.
 
-Major implemented modules/classred in src dir:
+Major implemented modules/classes in src dir:
 1) uploader.py
     This is the entry point of the command line interface.  It controls the workflow and dispatchs different requests to designated modules/classes.
 
@@ -21,7 +21,7 @@ Major implemented modules/classred in src dir:
     During the validation, it also constracts a dictionary to record file path, file size, validate result, validateion message for study files.  For metadata files, it constructs a dictionary only with file path and file size.
 
 4) common/graphql_client.py
-    This module hosts three clients for three graphql APIs, createTempCredential, createBatch, updateBatch.
+    This class hosts three clients for three graphql APIs, createTempCredential, createBatch, updateBatch.
 
 5) common/s3util.py
     This utility class is for access designated s3 bucket based on temp credetails and upload files to the bucket.
