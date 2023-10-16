@@ -35,16 +35,12 @@ class APIInvoker:
             self.log.info("get_temp_credential response status code: ", response.status_code)
             if status == 200: 
                 results = json.loads(response.content)
-                if results.get("data"):
-                    self.cred = results.get("data").get("createTempCredentials")
-                    return True
-                else:
-                    if results.get("errors"):
-                        self.log.error(f'Get temp creadential failed: {results.get("errors").get("message")}!')  
-                    else:
-                        self.log.error('Get temp creadential failed!')
+                if results.get("errors"):
+                    self.log.error(f'Get temp creadential failed: {results.get("errors").get("message")}!')  
                     return False
-               
+                else:
+                    self.cred = results.get("data").get("createTempCredentials")
+                    return True  
             else:
                 self.log.error(f'Get temp creadential failed with status code: {status}')
                 return False
