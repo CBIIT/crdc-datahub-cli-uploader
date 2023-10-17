@@ -1,7 +1,5 @@
-pyyaml
-neo4j==4.4.*
+pyyaml=
 boto3
 requests
-elasticsearch==7.13.*
 tqdm
 requests_aws4auth

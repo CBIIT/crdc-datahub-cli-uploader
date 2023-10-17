@@ -16,10 +16,9 @@ class APIInvoker:
         self.log = get_logger('GraphQL API')
         self.type = configs.get(UPLOAD_TYPE)
 
-    #to do 
     #1) get sts temp creadential for file/metadata uploading to S3 bucket
     def get_temp_credential(self):
-        self.cred = {}
+        self.cred = None
         body = f"""
         mutation {{
             createTempCredentials (submissionID: \"{self.submissionId}\") {{

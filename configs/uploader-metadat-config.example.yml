@@ -1,16 +1,16 @@
 Config:
     #API endpoint URL, required
-    api-url:
+    api-url: http://localhost:4020/api/graphql
     #API token string, required
-    token: 
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Inlvb3M0QG5paC5nb3YiLCJJR
     #submission ID, required
-    submission: 
+    submission: 2f42b5f1-5ea4-4923-a9bb-f496c63362ce
     #upload type,  valid value in [“file”, “metadata”], required
     type: metadata
     #folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
-    data: 
+    data: /Users/noname/workspace/testdata/cds_data_2023-8-31-August/
     #uploading intention, valid value in [“New”, “Update”, “Delete”],
-    intention: 
+    intention: New
     #file uploading retries
-    retries:
+    retries: 3
    
