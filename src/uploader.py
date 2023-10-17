@@ -71,10 +71,9 @@ def controller():
         temp_credential = apiInvoker.cred
         configs[TEMP_CREDENTIAL] = temp_credential
 
-        #step 5: upload all files to designated s3 bukect or load all metadata into DB
+        #step 5: upload all files to designated s3 bukect
         loader = FileLoader(configs, file_list)
         result = loader.upload()
-        #print(result)
         if not result:
             log.error("Failed to upload files: can't upload files to bukect!")
             print("Failed to upload files: can't upload files to bukect! Please check log file in tmp folder for details.")

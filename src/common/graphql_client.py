@@ -32,7 +32,7 @@ class APIInvoker:
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
-            self.log.info("get_temp_credential response status code: ", response.status_code)
+            self.log.info(f"get_temp_credential response status code: {status}.")
             if status == 200: 
                 results = json.loads(response.content)
                 if results.get("errors"):
@@ -42,7 +42,7 @@ class APIInvoker:
                     self.cred = results.get("data").get("createTempCredentials")
                     return True  
             else:
-                self.log.error(f'Get temp creadential failed with status code: {status}')
+                self.log.error(f'Get temp creadential failed with status code: {status}.')
                 return False
 
         except Exception as e:
@@ -93,7 +93,7 @@ class APIInvoker:
                         self.log.error('Create batch failed!')
                         return False
             else:
-                self.log.error(f'Create batch failed with status code: {status}')
+                self.log.error(f'Create batch failed with status code: {status}.')
                 return False
             
         except Exception as e:
@@ -139,7 +139,7 @@ class APIInvoker:
                         self.log.error('Update batch failed!')
                         return False
             else:
-                self.log.error(f'Update batch failed with status code: {status}')
+                self.log.error(f'Update batch failed with status code: {status}.')
                 return False
         except Exception as e:
             self.log.debug(e)
