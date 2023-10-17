@@ -36,7 +36,7 @@ Major implemented modules/classes in src dir:
     This class manages a job queue for uploading valid files (big size) and metadata files (small size) from local to S3 bucket via copier.py.
 
 7) copier.py
-    This class processes each job passed by file-uploader.py and either upload or put into s3 buket based on upload type, file|metadata, and size via S3util.py.
+    This class processes each job passed by file-uploader.py, then either upload or put into s3 buket based on upload type, file|metadata, and size via S3util.py.
 
 8) common/utils.py
     This module provides utility fuctions such as dumping dictionry to tsv file, extracting exception code and messages.
@@ -68,8 +68,8 @@ Usage of the CLI tool:
     Some arguments are only needed for type = “file” or type = “metadata”, e.g., —intention, —manifest
 
 2) Upload files command
-$ python src/uploader.py -c configs/test-file-upload.yml
+    $ python src/uploader.py -c configs/test-file-upload.yml
 
 3) Upload metadata command
-$ python src/uploader.py -c configs/test-metadata-upload.yml
+    $ python src/uploader.py -c configs/test-metadata-upload.yml
 
