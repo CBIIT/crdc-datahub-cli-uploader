@@ -52,7 +52,7 @@ Usage of the CLI tool:
     -u --submission, submission ID, required
     -t --type, valid value in [“file”, “metadata”], required
     -d --data, folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
-    -c --config, configuration file path, can potentially contain all above parameters, optional {}
+    -c --config, configuration file path, can potentially contain all above parameters, preferred
     -r --retries, file uploading retries, integer, optional, default value is 3
     Following arguments are needed to read important data from manifest, conditional required when type = “file”
 

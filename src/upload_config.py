@@ -15,7 +15,7 @@ Command line arguments / configuration
 -u --submission, submission ID, required
 -t --type, valid value in [“file”, “metadata”], required
 -d --data, folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
--c --config, configuration file path, can potentially contain all above parameters, optional {}
+-c --config, configuration file path, can potentially contain all above parameters, preferred
 -r --retries, file uploading retries, integer, optional, default value is 3
 Following arguments are needed to read important data from manifest, conditional required when type = “file”
 
@@ -26,12 +26,9 @@ Following arguments are needed to read important data from manifest, conditional
 Following argument is needed when type = "metadata"
 
 -i --intention, valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”
-CLI Argument and configuration module will
-
-validate and combine parameters from CLI and/or config file
+CLI Argument and configuration module will validate and combine parameters from CLI and/or config file
 If config_file is given, then everything else is potentially optional (if it’s included in config file)
 Some arguments are only needed for type = “file” or type = “metadata”, e.g., —intention, —manifest
-
 """
 
 class Config():
