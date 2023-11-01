@@ -19,5 +19,9 @@ Config:
     md5-field: original_md5sum
     #file uploading retries
     retries: 3
+    # if overwrite existed file
+    overwrite: true
+    # if only run file validation without uploading
+    dryrun: false
 
 

@@ -2,19 +2,16 @@
 import os
 from collections import deque
 
-from bento.common.utils import get_logger, LOG_PREFIX
-from copier import Copier
+from bento.common.utils import get_logger
 from bento.common.s3 import upload_log_file
-from common.constants import UPLOAD_TYPE, FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  \
-    SUBMISSION_ID, PRE_MANIFEST, S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES
+from common.constants import FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  OVERWRITE, DRY_RUN,\
+    PRE_MANIFEST, S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES
 from common.utils import clean_up_strs, clean_up_key_value
+from copier import Copier
 
-if LOG_PREFIX not in os.environ:
-    os.environ[LOG_PREFIX] = 'File_Loader'
-
-# This script upload files and matadatafiles from local to specified S3 bucket
+# This script upload files and matadata files from local to specified S3 bucket
 # input: file info list
-class FileLoader:
+class FileUploader:
 
     # keys in job dict
     TTL = 'ttl'
@@ -25,25 +22,19 @@ class FileLoader:
         :param configs: all configurations for file uploading
         :param file_list: list of file path, size
         """
-        dryrun = False
-        overwrite = True
-
         self.configs = configs
         self.retry= configs.get(RETRIES)
-        if configs.get(FILE_PREFIX):
-            self.prefix = configs[FILE_PREFIX]
-        else:
-            self.prefix =  f'{configs[SUBMISSION_ID]}/{configs[UPLOAD_TYPE]}' # prefix is submissionId/file
+        self.prefix = configs[FILE_PREFIX]
         self.bucket_name = configs.get(S3_BUCKET)
         self.credential = configs.get(TEMP_CREDENTIAL)
         self.pre_manifest = configs.get(PRE_MANIFEST)
         self.file_info_list = file_list
         self.copier = None
         self.count = len(file_list)
-        self.overwrite = overwrite
-        self.dryrun = dryrun
+        self.overwrite = configs.get(OVERWRITE)
+        self.dryrun = configs.get(DRY_RUN)
         self.upload_log_dir = None
-        self.log = get_logger('FileLoader')
+        self.log = get_logger('File_Uploader')
 
         # Statistics
         self.files_processed = 0
@@ -61,7 +52,7 @@ class FileLoader:
                 self.TTL: self.retry,
                 self.INFO: info,
             })
-            if self.files_processed >= self.count > 0:
+            if self.files_processed >= self.count:
                 break
         return files
 

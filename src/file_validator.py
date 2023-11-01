@@ -4,7 +4,7 @@ import csv
 import os
 import glob
 
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
+from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
      FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_INVALID_REASON, FILE_PATH, SUCCEEDED, ERRORS
 from common.utils import clean_up_key_value, clean_up_strs, get_exception_msg
 from bento.common.utils import get_logger, get_md5
@@ -33,7 +33,7 @@ class FileValidator:
             return False
         
         
-        if self.uploadType == UPLOAD_TYPES[1]: #metadata
+        if self.uploadType == TYPE_MATE_DATA: #metadata
             txt_files = glob.glob('{}/*.txt'.format(self.file_dir ))
             tsv_files = glob.glob('{}/*.tsv'.format(self.file_dir ))
             file_list = txt_files + tsv_files
@@ -47,7 +47,7 @@ class FileValidator:
                 #metadata file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None}
                 self.fileList.append({FILE_NAME_DEFAULT:filename, FILE_PATH: filepath, FILE_SIZE_DEFAULT: size})
 
-        elif self.uploadType == UPLOAD_TYPES[0]: #file
+        elif self.uploadType == TYPE_FILE: #file
             if not os.path.isfile(self.pre_manifest):
                 self.log.critical(f'manifest file is not valid!')
                 return False

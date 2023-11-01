@@ -13,4 +13,9 @@ Config:
     intention: New
     #file uploading retries
     retries: 3
+     # if overwrite existed file
+    overwrite: true
+    # if only run file validation without uploading
+    dryrun: false
+
    

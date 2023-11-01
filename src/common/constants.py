@@ -1,9 +1,14 @@
 #define constants, enums, etc.
 #config 
 UPLOAD_TYPE = "type"
-UPLOAD_TYPES = ["file", "metadata"]
+TYPE_FILE ="file"
+TYPE_MATE_DATA= "metadata"
+UPLOAD_TYPES = [TYPE_FILE, TYPE_MATE_DATA]
 INTENTION = "intention"
-INTENTIONS =  ["New", "Update", "Delete"]
+INTENTION_NEW = "New"
+INTENTION_UPDATE = "Update"
+INTENTION_DELETE = "Delete"
+INTENTIONS = [INTENTION_NEW, INTENTION_UPDATE, INTENTION_DELETE]
 FILE_NAME_FIELD = "name-field"
 FILE_NAME_DEFAULT = "file_name"  #match data model file name 
 FILE_PATH = "file_path"
@@ -18,6 +23,8 @@ PRE_MANIFEST = "manifest"
 FILE_DIR = "data"
 S3_BUCKET = "bucket"
 RETRIES = "retries"
+OVERWRITE = "overwrite"
+DRY_RUN = "dryrun"
 
 #file validation 
 FILE_INVALID_REASON = "invalid_reason"

@@ -16,7 +16,7 @@ class APIInvoker:
         self.log = get_logger('GraphQL API')
         self.type = configs.get(UPLOAD_TYPE)
 
-    #1) get sts temp creadential for file/metadata uploading to S3 bucket
+    #1) get sts temp credential for file/metadata uploading to S3 bucket
     def get_temp_credential(self):
         self.cred = None
         body = f"""
@@ -33,25 +33,25 @@ class APIInvoker:
             status = response.status_code
             self.log.info(f"get_temp_credential response status code: {status}.")
             if status == 200: 
-                results = json.loads(response.content)
+                results = response.json()
                 if results.get("errors"):
-                    self.log.error(f'Get temp creadential failed: {results.get("errors").get("message")}!')  
+                    self.log.error(f'Get temp credential failed: {results.get("errors").get("message")}!')  
                     return False
                 else:
                     self.cred = results.get("data").get("createTempCredentials")
                     return True  
             else:
-                self.log.error(f'Get temp creadential failed with status code: {status}.')
+                self.log.error(f'Get temp credential failed with status code: {status}.')
                 return False
 
         except Exception as e:
             self.log.debug(e)
-            self.log.exception(f'Get temp creadential failed! {get_exception_msg()}')
+            self.log.exception(f'Get temp credential failed! {get_exception_msg()}')
             return False
 
 
     #2) create upload batch
-    def create_bitch(self, file_array):
+    def create_batch(self, file_array):
         self.new_batch = None
         #adjust file list to match the graphql param.
         file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
@@ -81,7 +81,7 @@ class APIInvoker:
             status = response.status_code
             self.log.info(f"update bitch response status code: {status}.")
             if status == 200: 
-                results = json.loads(response.content)
+                results = response.json()
                 if results.get("errors"):
                         self.log.error(f'Create batch failed: {results.get("errors")[0].get("message")}!') 
                 else:
@@ -101,7 +101,7 @@ class APIInvoker:
             return False
 
     #3) update upload batch
-    def update_bitch(self, batchID, uploaded_files):
+    def update_batch(self, batchID, uploaded_files):
         self.batch = None
         #adjust file list to match the graphql param.
         file_array = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors")
@@ -127,7 +127,7 @@ class APIInvoker:
             status = response.status_code
             self.log.info(f"update bitch response status code: {status}.")
             if status == 200: 
-                results = json.loads(response.content)
+                results = response.json()
                 if results.get("errors"):
                         self.log.error(f'Update batch failed: {results.get("errors")[0].get("message")}!') 
                 else:
