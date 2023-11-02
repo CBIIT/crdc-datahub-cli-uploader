@@ -25,6 +25,7 @@ class FileValidator:
         self.pre_manifest = configs.get(PRE_MANIFEST)
         self.fileList = [] #list of files object {file_name, file_path, file_size, invalid_reason}
         self.log = get_logger('File_Validator')
+        self.invalid_count = 0
 
     def validate(self):
         # check file dir
@@ -60,6 +61,7 @@ class FileValidator:
         self.files_info =  self.read_manifest()
         if not self.files_info or len(self.files_info ) == 0:
             return False
+        
         for info in self.files_info:
             invalid_reason = ""
             file_path = os.path.join(self.file_dir, info[FILE_NAME_DEFAULT])
@@ -70,24 +72,28 @@ class FileValidator:
                 invalid_reason += f"File {file_path} does not exist!"
                 #file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None, FILE_INVALID_REASON: None}
                 self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.invalid_count += 1
                 continue
             
             file_size = os.path.getsize(file_path)
             if file_size != size_info:
                 invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifet {info[FILE_SIZE_DEFAULT]}!"
                 self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
+                self.invalid_count += 1
                 continue
 
             md5_info = info[MD5_DEFAULT] 
             if not md5_info:
                 invalid_reason += f"MD5 of {info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
                 self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.invalid_count += 1
                 continue
-            #calculte file md5
+            #calculate file md5
             md5sum = get_md5(file_path)
             if md5_info != md5sum:
                 invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifet {md5_info}!"
                 self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.invalid_count += 1
                 continue
 
             self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None})
