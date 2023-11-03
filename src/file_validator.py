@@ -53,7 +53,10 @@ class FileValidator:
                 self.log.critical(f'manifest file is not valid!')
                 return False
             return self.validate_size_md5()
-
+        
+        else:
+            self.log.critical(f'Invalid uploading type, {self.uploadType}!')
+            return False
         return True
 
     #validate file's size and md5 against ree-manifest.   
@@ -65,7 +68,8 @@ class FileValidator:
         for info in self.files_info:
             invalid_reason = ""
             file_path = os.path.join(self.file_dir, info[FILE_NAME_DEFAULT])
-            size_info = 0 if not info[FILE_SIZE_DEFAULT] or not info[FILE_SIZE_DEFAULT].isdigit() else int(info[FILE_SIZE_DEFAULT])
+            size = info.get(FILE_SIZE_DEFAULT)
+            size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
 
             if not os.path.isfile(file_path):
@@ -77,7 +81,7 @@ class FileValidator:
             
             file_size = os.path.getsize(file_path)
             if file_size != size_info:
-                invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifet {info[FILE_SIZE_DEFAULT]}!"
+                invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {info[FILE_SIZE_DEFAULT]}!"
                 self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, FILE_INVALID_REASON: invalid_reason})
                 self.invalid_count += 1
                 continue

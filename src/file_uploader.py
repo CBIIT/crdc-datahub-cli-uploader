@@ -38,7 +38,6 @@ class FileUploader:
 
         # Statistics
         self.files_processed = 0
-        self.files_skipped = 0
         self.files_failed = 0
 
     @staticmethod
@@ -70,22 +69,16 @@ class FileUploader:
         while file_queue:
             job = file_queue.popleft()
             file_info = job[self.INFO]
-            #skip invalid file
-            file_skip = False if not file_info.get(SUCCEEDED) else True
             job[self.TTL] -= 1
-            if file_skip == False:
-                self.files_processed += 1
-                result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
-                if result.get(Copier.STATUS):
-                    file_info[SUCCEEDED] = True
-                    file_info[ERRORS] = None
-                else:
-                    self._deal_with_failed_file(job, file_queue)
-            else:
-                self.files_skipped += 1
-                file_info[SUCCEEDED] = False
 
-        self.log.info(f'Files skipped: {self.files_skipped}')
+            self.files_processed += 1
+            result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
+            if result.get(Copier.STATUS):
+                file_info[SUCCEEDED] = True
+                file_info[ERRORS] = None
+            else:
+                self._deal_with_failed_file(job, file_queue)
+
         self.log.info(f'Files processed: {self.files_processed}')
         self.log.info(f'Files not found: {len(self.copier.files_not_found)}')
         self.log.info(f'Files copied: {self.copier.files_copied}')
