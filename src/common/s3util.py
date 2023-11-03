@@ -12,13 +12,13 @@ class S3Bucket:
     def __init__(self):
         self.log = get_logger('S3 Bucket')
 
-    def set_s3_client(self, bucket, creadentials):
+    def set_s3_client(self, bucket, credentials):
         self.bucket_name = bucket
-        self.credential = creadentials
+        self.credential = credentials
         session = boto3.session.Session(
-            aws_access_key_id=creadentials[ACCESS_KEY_ID],
-            aws_secret_access_key=creadentials[SECRET_KEY],
-            aws_session_token=creadentials[SESSION_TOKEN]
+            aws_access_key_id=credentials[ACCESS_KEY_ID],
+            aws_secret_access_key=credentials[SECRET_KEY],
+            aws_session_token=credentials[SESSION_TOKEN]
         )
         self.client = session.client('s3')
         self.s3 = session.resource('s3')

@@ -1,5 +1,4 @@
-pyyaml=
+pyyaml
 boto3
 requests
-tqdm
 requests_aws4auth

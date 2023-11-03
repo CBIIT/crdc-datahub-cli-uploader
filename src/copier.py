@@ -7,7 +7,7 @@ from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, ge
 
 from common.graphql_client import APIInvoker
 from common.s3util import S3Bucket
-from common.constants import UPLOAD_TYPE, UPLOAD_TYPES,FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, ERRORS
+from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, ERRORS
 from common.utils import get_exception_msg
 class Copier:
 
@@ -127,7 +127,7 @@ class Copier:
 
     def _upload_obj(self, org_url, key, org_size):
         
-        if self.type == UPLOAD_TYPES[0] or org_size > self.SINGLE_PUT_LIMIT: #study files upload (big files)
+        if self.type == TYPE_FILE or org_size > self.SINGLE_PUT_LIMIT: #study files upload (big files)
             parts = int(org_size) // self.MULTI_PART_CHUNK_SIZE
             chunk_size = self.MULTI_PART_CHUNK_SIZE if parts < self.PARTS_LIMIT else int(org_size) // self.PARTS_LIMIT
             t_config = TransferConfig(multipart_threshold=self.MULTI_PART_THRESHOLD,
