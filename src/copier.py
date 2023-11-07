@@ -78,7 +78,7 @@ class Copier:
             org_url = file_info[FILE_PATH]
             file_name = file_info[FILE_NAME_DEFAULT]
             self.log.info(f'Processing {org_url}')
-            key = f'{self.prefix}/{file_name}'
+            key = f'{self.prefix}/{file_name}'.strip('/')
             org_size = file_info[FILE_SIZE_DEFAULT]
             self.log.info(f'Original file size: {format_bytes(org_size)}.')
 
