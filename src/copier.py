@@ -78,7 +78,7 @@ class Copier:
             org_url = file_info[FILE_PATH]
             file_name = file_info[FILE_NAME_DEFAULT]
             self.log.info(f'Processing {org_url}')
-            key = f'{self.prefix}/{file_name}'.strip('/')
+            key = f'{self.prefix}/{file_name}'
             org_size = file_info[FILE_SIZE_DEFAULT]
             self.log.info(f'Original file size: {format_bytes(org_size)}.')
 
@@ -94,11 +94,11 @@ class Copier:
                 return succeed
             
             if not overwrite and self.bucket.same_size_file_exists(key, org_size):
-                self.log.info(f'File skipped: same size file exists at: "{key}"')
+                self.log.info(f'File skipped: same size file exists at: "{key.strip("/")}"')
                 self.files_exist_at_dest += 1
                 return succeed
 
-            self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key} ...')
+            self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
            
             dest_size = self._upload_obj(org_url, key, org_size)
             if dest_size != org_size:
