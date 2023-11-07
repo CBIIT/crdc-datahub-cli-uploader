@@ -94,11 +94,11 @@ class Copier:
                 return succeed
             
             if not overwrite and self.bucket.same_size_file_exists(key, org_size):
-                self.log.info(f'File skipped: same size file exists at: "{key}"')
+                self.log.info(f'File skipped: same size file exists at: "{key.strip("/")}"')
                 self.files_exist_at_dest += 1
                 return succeed
 
-            self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key} ...')
+            self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
            
             dest_size = self._upload_obj(org_url, key, org_size)
             if dest_size != org_size:
