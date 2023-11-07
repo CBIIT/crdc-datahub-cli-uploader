@@ -82,7 +82,7 @@ class FileValidator:
             file_size = os.path.getsize(file_path)
             if file_size != size_info:
                 invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {info[FILE_SIZE_DEFAULT]}!"
-                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, ERRORS: invalid_reason})
+                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: invalid_reason})
                 self.invalid_count += 1
                 continue
 

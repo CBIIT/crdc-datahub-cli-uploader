@@ -92,7 +92,7 @@ def controller():
             print(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
     
     else:
-        log.error(f"Found total {validator.invalid_count} files are invalid!")
+        log.error(f"Found total {validator.invalid_count} file(s) are invalid!")
     
     #step 6: #dump file_list with uploading status and errors to tmp/reports dir
     try:
