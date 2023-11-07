@@ -32,7 +32,7 @@ def get_exception_msg():
 
 
 """
-Dump list of dictionary to TSV file, caller needs handlw exception.
+Dump list of dictionary to TSV file, caller needs handle exception.
 :param: dict_list as list of dictionary
 :param: file_path as str
 :return: boolean
