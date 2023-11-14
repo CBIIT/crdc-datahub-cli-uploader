@@ -79,7 +79,7 @@ class APIInvoker:
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
-            self.log.info(f"update bitch response status code: {status}.")
+            self.log.info(f"update batch response status code: {status}.")
             if status == 200: 
                 results = response.json()
                 if results.get("errors"):
@@ -125,7 +125,7 @@ class APIInvoker:
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
-            self.log.info(f"update bitch response status code: {status}.")
+            self.log.info(f"update batch response status code: {status}.")
             if status == 200: 
                 results = response.json()
                 if results.get("errors"):

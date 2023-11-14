@@ -34,8 +34,10 @@ class Config():
         args = parser.parse_args()
         self.data = {}
 
-
-        if args.config and os.path.isfile(args.config.strip()):
+        if args.config:
+            if not os.path.isfile(args.config.strip()):
+                self.log.critical(f'Configuration file does not exist, please check the file path: "{args.config}"!')
+                return None
             with open(args.config.strip()) as c_file:
                 self.data = yaml.safe_load(c_file)['Config']
 
