@@ -5,11 +5,11 @@ Config:
     token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Inlvb3M0QG5paC5nb3YiLCJJR
     #submission ID, required
     submission: 2f42b5f1-5ea4-4923-a9bb-f496c63362ce
-    #upload type,  valid value in [“file”, “metadata”], required
+    #upload type,  valid value in [file, metadata], required
     type: file
-    #folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
+    #folder that contains either data files (type = file) or metadata (TSV/TXT) files (type = metadata), required
     data: /Users/noname/workspace/testdata/PRECINCT01-2023-08-21/
-    #path to manifest file, conditional required when type = “file”
+    #path to manifest file, conditional required when type = file
     manifest: /Users/noname/workspace/testdata/PRECINCT01-2023-08-21/PRECINCT01 File Transfer Manifest - Study Files x3.txt
     #file name header name in the manifest file, default is file_name
     name-field: file_name
