@@ -98,8 +98,8 @@ class Copier:
                 self.files_exist_at_dest += 1
                 return succeed
 
-            self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
-           
+            #self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
+            self.log.info(f'Copying from {org_url} to destination folder in S3 bucket ...')
             dest_size = self._upload_obj(org_url, key, org_size)
             if dest_size != org_size:
                 self.log.error(f'Copy failed: destination file size is different from original!')
