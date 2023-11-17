@@ -140,4 +140,4 @@ backup/
 **/.DS_Store
 
 #config files for testing
-**/configs/
+**/configs/test*
