@@ -1,75 +1,120 @@
-# crdc-datahub-upload-cli
+# CRDC Data Hub CLI Uploader 
 
-CRDC datahub upload CLI is a command line interface application for end users to upload cancer research files and metadata to Datahub.
+## Introduction
 
-The application is programmed purely with python v3.11.  It depends on bento common module, http, json, aws boto3 and so on. All required python modules is listed in the file, requirements.txt, and .gitsubmodules.
+CRDC Data Hub CLI Uploader (will be referred to as “CLI tool” or “CLI” in the rest of this document) is a command line tool designed to help data submitters to upload files or metadata to Data Hub submission S3 bucket as a part of a submission created in the Data Hub.
 
-The application is consist of multiple python modules/classes to support multiple functions listed below:
+The CLI tool was designed to run on data submitter’s computer. It communicates with Data Hub backend services to verify user’s identity and permission, uploads files and metadata to Data Hub submission S3 bucket as well as create “batch” records in Data Hub’s database which will be viewable on Data Hub’s web portal. 
 
-1) Validate local and remote files by verifying md5 and size of files.
-2) Create uploading batch via crdc-datahub backend API.
-3) Create AWS STS temp credential for uploading files to s3 bucket.
-4) Upload both files and metadata files to S3 bucket.
-5) Update uploading batch via crdc-datahub backend API.
-6) Create uploading report.
-7) Log info, error and exceptions.
+## Prerequisites
 
-Major implemented modules/classes in src dir:
+The CLI tool was written in Python3 and requires following environment/software to be installed.
 
-1) uploader.py
-    This is the entry point of the command line interface.  It controls the workflow and dispatches different requests to designated modules/classes.
+- A Mac or Windows computer
+- Python3
+- Git
+- An active Data Hub user with Submitter or Organization Owner roles
 
-2) upload_config.py
-    This class manages request arguments and configurations.  It receives user's arguments, validate these arguments and store them in a dictionary.
+## Download and Installation
 
-3) file_validator.py
-    This class validates 1) files by checking file size and md5; 2) metadata files by checking if file existing in the data folder defined by user.
-    During the validation, it also constructs a dictionary to record file path, file size, validate result, validation message for files.  For metadata files, it constructs a dictionary only with file path and file size.
+- Open a terminal window (on Mac) or command line window (on Windows)
+- Switch to the desired folder for the CLI tool to be installed (‘$’ is not part of the command)
 
-4) common/graphql_client.py
-    This class hosts three clients for three graphql APIs, createTempCredential, createBatch, updateBatch.
+  `$ cd desired_installation_folder`
+ 
+- Type of paste in following commands, press enter/return after each command (‘$’ is not part of the command)
+- Download CLI tool
+  - git clone --recurse-submodules https://github.com/CBIIT/crdc-datahub-cli-uploader.git
+  -	Switch to CLI folder. All commands in the reset of this document needs to be executed inside the CLI folder.
+  
+    `$ cd crdc-datahub-cli-uploader`
+  - Install dependencies. Depends on how Python3 was installed, on some systems you need to use “pip” instead of “pip3” in following command.
+  
+    `$ pip3 install -r requirements.txt`
 
-5) common/s3util.py
-    This utility class is for access designated s3 bucket with temp AWS STS credentials, and upload files to the bucket designated by uploading batch.
+## Gather Information from Data Hub
 
-6) file_uploader.py
-    This class manages a job queue for uploading valid files (big size) and metadata files (small size) from local to S3 bucket via copier.py.
+### Download Data Hub API token
+	
+- Log into Data Hub web portal
+- Click your name near the top right corner
+- Click “API TOKEN” in the menu
+- Click “Create Token” button
+- Click the “copy” button next to the text box
+- Pasted the token into a text file for future steps
 
-7) copier.py
-    This class processes each job passed by file-uploader.py, then either upload or put into s3 bucket based on upload type, file|metadata, and size via S3util.py.
+### Copy submission ID
 
-8) common/utils.py
-    This module provides utility functions such as dumping dictionary to tsv file, extracting exception code and messages.
+- Log into Data Hub web portal
+- Click “Data Submission”
+- (Optional) Click “Create a Data Submission” if you want to create a new submission
+- In the submission table, click the submission name of the submission you’d like to upload files or metadata to
+- Click the “copy” button next to submission ID
+- Pasted the submission ID into a text file for future steps
 
-Usage of the CLI tool:
+## Upload files
 
-1) Get helps command
-    $ python src/uploader.py -h
-    ##Executing results:
-    Command line arguments / configuration
-    -a --api-url, API endpoint URL, required
-    -k --token, API token string, required
-    -u --submission, submission ID, required
-    -t --type, valid value in [“file”, “metadata”], required
-    -d --data, folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required
-    -c --config, configuration file path, can potentially contain all above parameters, preferred
-    -r --retries, file uploading retries, integer, optional, default value is 3
-    Following arguments are needed to read important data from manifest, conditional required when type = “file”
+### Prepare files
 
-    -m --manifest, path to manifest file, conditional required when type = “file”
-    -n --name-field
-    -s --size-field
-    -m --md5-field
-    Following argument is needed when type = "metadata"
+Put all files to be uploaded in the same folder.
 
-    -i --intention, valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”
-    CLI configuration module will validate and combine parameters from CLI and/or config file
-    If config_file is given, then everything else is potentially optional (if it’s included in config file)
-    Some arguments are only needed for type = “file” or type = “metadata”, e.g., —intention, —manifest
+### Prepare manifest
 
-2) Upload files command
-    $ python src/uploader.py -c configs/test-file-upload.yml
+A manifest is a special metadata (TSV) file that contains information about files to be uploaded. CLI tool will use the information in a manifest to find, validate and upload files to Data Hub. There are 3 columns that are important to CLI tool:
+- Column contains file names
+- Column contains file sizes
+- Column contains file MD5 checksums
 
-3) Upload metadata command
-    $ python src/uploader.py -c configs/test-metadata-upload.yml
+Different Data Commons may have different column names, but they all contain the same information.
+
+You can put a manifest in the same folder with the files, or you can put it in a separate folder.
+
+### Prepare configuration file
+- Make a copy of the example config file: “crdc-datahub-cli-uploader/configs/uploader-file-config.example.yml”, give it an appropriate name, in this document we name it “file-upload.yml”
+- Open the new config file with a text editor, preferably a code editor like Sublime Text, Notepad++, VSCode, Vim, Emacs etc. Please DO NOT use a word processor like Word or Pages to open the config file.
+- Configurations are in “key: value” format. There must be a space between colon and the value.
+- api-url: keep it unchanged, unless you are using an environment other than Data Hub production environment
+- token: paste in the API token saved in previous steps
+- submission: paste in the submission ID saved in previous steps 
+- type: must be set to “file”
+- data: path to the folder that contains the files to be uploaded
+- manifest: path to the manifest file
+- name-field: column name in the manifest file that contains file names
+- size-field: column name in the manifest file that contains file sizes
+- md5-field: column name in the manifest file that contains file MD5 checksums
+- retries: number of retries the CLI tool will perform after a failed upload 
+- overwrite: if set to “true”, CLI will upload a file to overwrite the file with same name that already exists in the Data Hub submission S3 bucket. If set to “false”, CLI will not upload a file if a file with the same name exists in the Data Hub submission S3 bucket.
+- dryrun: if set to “true”, CLI will not upload any files to the Data Hub submission S3 bucket. If set to “false”, CLI will upload files to the Data Hub submission S3 bucket.
+
+### Execute upload command
+
+Depends on how Python3 was installed, on some systems you need to use “python” instead of “python3” in following command.
+
+`$ python3 src/uploader.py --config configs/file-upload.yml`
+
+## Upload metadata
+
+### Prepare metadata
+
+Put all metadata (TSV) files to be uploaded in the same folder.
+
+### Prepare configuration file
+- Make a copy of the example config file: “crdc-datahub-cli-uploader/configs/ uploader-metadata-config.example.yml”, give it an appropriate name, in this document we name it “metadata-upload.yml”
+- Open the new config file with a text editor, preferably a code editor like Sublime Text, Notepad++, VSCode, Vim, Emacs etc. Please DO NOT use a word processor like Word or Pages to open the config file.
+- Configurations are in “key: value” format. There must be a space between colon and the value.
+- api-url: keep it unchanged, unless you are using an environment other than Data Hub production environment
+- token: paste in the API token saved in previous steps
+- submission: paste in the submission ID saved in previous steps 
+- type: must be set to “metadata”
+- data: path to the folder that contains the metadata (TSV) files to be uploaded. All files with .txt or .tsv extensions inside the folder will be uploaded.
+- intention: can be set to one of the following values: “New”, “Update”, “Delete”
+- retries: number of retries the CLI tool will perform after a failed upload 
+- overwrite: if set to “true”, CLI will upload a file to overwrite the file with same name that already exists in the Data Hub submission S3 bucket. If set to “false”, CLI will not upload a file if a file with the same name exists in the Data Hub submission S3 bucket.
+- dryrun: if set to “true”, CLI will not upload any files to the Data Hub submission S3 bucket. If set to “false”, CLI will upload files to the Data Hub submission S3 bucket.
+
+### Execute upload command
+
+Depends on how Python3 was installed, on some systems you need to use “python” instead of “python3” in following command.
+
+`$ python3 src/uploader.py --config configs/metadata-upload.yml`
 
