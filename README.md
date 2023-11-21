@@ -22,14 +22,23 @@ The CLI tool was written in Python3 and requires following environment/software 
 
   `$ cd desired_installation_folder`
  
-- Type of paste in following commands, press enter/return after each command (‘$’ is not part of the command)
-- Download CLI tool
-  - git clone --recurse-submodules https://github.com/CBIIT/crdc-datahub-cli-uploader.git
+- Type or paste in following commands, press enter/return after each command (‘$’ is not part of the command)
+  - Download CLI tool
+    - Use Git:
+
+      `git clone --recurse-submodules https://github.com/CBIIT/crdc-datahub-cli-uploader.git`
+    
+    - Download zip file from release page
+      - Go to [Release Page](https://github.com/CBIIT/crdc-datahub-cli-uploader/releases)
+      - Download crdc-datahub-cli-uploader.zip file from the latest release
+      - Unzip crdc-datahub-cli-uploader.zip
+  
   -	Switch to CLI folder. All commands in the reset of this document needs to be executed inside the CLI folder.
-  
+
     `$ cd crdc-datahub-cli-uploader`
+
   - Install dependencies. Depends on how Python3 was installed, on some systems you need to use “pip” instead of “pip3” in following command.
-  
+
     `$ pip3 install -r requirements.txt`
 
 ## Gather Information from Data Hub
