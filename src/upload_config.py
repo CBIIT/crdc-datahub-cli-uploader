@@ -94,7 +94,7 @@ class Config():
         dry_run = self.data.get(DRY_RUN, False) #default value is False
         if isinstance(dry_run, str):
             dry_run = True if overwrite.lower() == "true" else False
-            self.data[OVERWRITE] = dry_run
+            self.data[DRY_RUN] = dry_run
 
         type = self.data.get(UPLOAD_TYPE)
         if type is None:
