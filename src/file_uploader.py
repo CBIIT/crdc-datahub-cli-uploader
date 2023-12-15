@@ -85,7 +85,10 @@ class FileUploader:
         self.log.info(f'Files exist at destination: {self.copier.files_exist_at_dest}')
         self.log.info(f'Files failed: {self.files_failed}')
 
-        return self.copier.files_copied > 0
+        if self.copier.files_exist_at_dest == self.files_processed:
+            self.log.info(f"All files of this batch exist in s3 bucket already! Please check!")
+
+        return self.copier.files_copied > 0 or self.copier.files_exist_at_dest == self.files_processed
 
     def _deal_with_failed_file(self, job, queue):
         if job[self.TTL]  > 0:
