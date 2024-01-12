@@ -130,16 +130,13 @@ class Config():
 
             elif type == TYPE_MATE_DATA: #metadata
                 #check intention
-                # based on requirement in ticket 456, in MVP2 M2 the intention is always New
-                self.data[INTENTION] = INTENTION_NEW #New
-        
-                # intention = self.data.get(INTENTION)
-                # if intention is None:
-                #     self.log.critical(f'intention is required for metadata uploading!')
-                #     return False
-                # elif intention not in INTENTIONS:
-                #     self.log.critical(f'{intention} is not a valid intention!')
-                #     return False
+                intention = self.data.get(INTENTION)
+                if intention is None:
+                    self.log.critical(f'intention is required for metadata uploading!')
+                    return False
+                elif intention not in INTENTIONS:
+                    self.log.critical(f'{intention} is not a valid intention!')
+                    return False
         
         filepath = self.data.get(FILE_DIR)
         if filepath is None:

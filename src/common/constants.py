@@ -28,6 +28,7 @@ DRY_RUN = "dryrun"
 
 #file validation 
 FILE_INVALID_REASON = "invalid_reason"
+SKIPPED = "skipped"
 
 #upload
 UPLOAD_STATUS ="upload_status"

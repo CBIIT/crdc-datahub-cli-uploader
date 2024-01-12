@@ -104,7 +104,8 @@ class APIInvoker:
     def update_batch(self, batchID, uploaded_files):
         self.batch = None
         #adjust file list to match the graphql param.
-        file_array = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors")
+        file_array = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors").replace("\"skipped\"", "skipped") \
+            if uploaded_files and len(uploaded_files) > 0 else json.dumps(uploaded_files)
         body = f"""
         mutation {{
             updateBatch (
