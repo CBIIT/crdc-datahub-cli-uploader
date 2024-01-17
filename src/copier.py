@@ -7,7 +7,8 @@ from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, ge
 
 from common.graphql_client import APIInvoker
 from common.s3util import S3Bucket
-from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, ERRORS
+from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, \
+    ERRORS, SKIPPED
 from common.utils import get_exception_msg
 class Copier:
 
@@ -96,6 +97,7 @@ class Copier:
             if not overwrite and self.bucket.same_size_file_exists(key, org_size):
                 self.log.info(f'File skipped: same size file exists at: "{key.strip("/")}"')
                 self.files_exist_at_dest += 1
+                file_info[SKIPPED] = True
                 return succeed
 
             #self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')

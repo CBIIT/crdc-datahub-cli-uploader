@@ -7,7 +7,8 @@ import sys
 
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, BATCH_STATUS, \
-    BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, FILE_PATH
+    BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
+    FILE_PATH, SKIPPED
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
@@ -77,7 +78,7 @@ def controller():
                 #write filelist to tsv file and save to result dir
                 print("File uploading completed!")
             #set fileList for update batch
-            file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item[SUCCEEDED], "errors": item[ERRORS]} for item in file_list]
+            file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item[SUCCEEDED], "errors": item[ERRORS], "skipped": item.get(SKIPPED)} for item in file_list]
         
         #step 6: update the batch
         #uploaded_files: 
