@@ -1,7 +1,7 @@
 #define constants, enums, etc.
 #config 
 UPLOAD_TYPE = "type"
-TYPE_FILE ="file"
+TYPE_FILE ="data file"
 TYPE_MATE_DATA= "metadata"
 UPLOAD_TYPES = [TYPE_FILE, TYPE_MATE_DATA]
 INTENTION = "intention"
