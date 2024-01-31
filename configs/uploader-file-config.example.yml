@@ -5,8 +5,8 @@ Config:
     token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Inlvb3M0QG5paC5nb3YiLCJJR
     #submission ID, required
     submission: 2f42b5f1-5ea4-4923-a9bb-f496c63362ce
-    #upload type,  valid value in [file, metadata], required
-    type: file
+    #upload type,  valid value in [data file, metadata], required
+    type: data file
     #folder that contains either data files (type = file) or metadata (TSV/TXT) files (type = metadata), required
     data: /Users/noname/workspace/testdata/PRECINCT01-2023-08-21/
     #path to manifest file, conditional required when type = file

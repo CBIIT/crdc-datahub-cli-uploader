@@ -15,7 +15,7 @@ class Config():
         parser.add_argument('-a', '--api-url', help='API endpoint URL, required')
         parser.add_argument('-k', '--token', help='API token string, required')
         parser.add_argument('-u', '--submission', help='submission ID, required')
-        parser.add_argument('-t', '--type', choices=UPLOAD_TYPES, help='valid value in [“file”, “metadata”], required')
+        parser.add_argument('-t', '--type', choices=UPLOAD_TYPES, help='valid value in [“data file”, “metadata”], required')
         parser.add_argument('-d', '--data', help='folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required')
         parser.add_argument('--overwrite', default=False, type=bool, help='Overwrite file even same size file already exists at destination, optional, default is false')
         parser.add_argument('--dryrun', default=False, type=bool, help='Only check original file, won\'t copy any files, optional, default is false')
@@ -104,7 +104,7 @@ class Config():
             self.log.critical(f'{type} is not valid uploading type!')
             return False
         else:
-            if type == TYPE_FILE: #file
+            if type == TYPE_FILE: #data file
                 #check manifest
                 manifest = self.data.get(PRE_MANIFEST)
                 if manifest is None:
