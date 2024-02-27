@@ -120,6 +120,6 @@ class FileValidator:
                     })
         except Exception as e:
             self.log.debug(e)
-            self.log.exception(f"Failed to read pre-manifest file! {get_exception_msg}")
+            self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
         return files_info
 
