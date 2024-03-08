@@ -35,18 +35,18 @@ class APIInvoker:
             if status == 200: 
                 results = response.json()
                 if results.get("errors"):
-                    self.log.error(f'Get temp credential failed: {results.get("errors").get("message")}!')  
+                    self.log.error(f'Retrieve temporary credential failed - {results.get("errors")[0].get("message")}.')  
                     return False
                 else:
                     self.cred = results.get("data").get("createTempCredentials")
                     return True  
             else:
-                self.log.error(f'Get temp credential failed with status code: {status}.')
+                self.log.error(f'Retrieve temporary credential failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
                 return False
 
         except Exception as e:
             self.log.debug(e)
-            self.log.exception(f'Get temp credential failed! {get_exception_msg()}')
+            self.log.exception(f'Retrieve temporary credential failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
 
 
@@ -83,7 +83,7 @@ class APIInvoker:
             if status == 200: 
                 results = response.json()
                 if results.get("errors"):
-                        self.log.error(f'Create batch failed: {results.get("errors")[0].get("message")}!') 
+                        self.log.error(f'Create batch failed: {results.get("errors")[0].get("message")}.') 
                 else:
                     self.new_batch = results.get("data").get("createBatch")
                     if self.new_batch:
@@ -92,12 +92,12 @@ class APIInvoker:
                         self.log.error('Create batch failed!')
                         return False
             else:
-                self.log.error(f'Create batch failed with status code: {status}.')
+                self.log.error(f'Create batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
                 return False
             
         except Exception as e:
             #self.log.debug(e)
-            self.log.exception(f'Create batch failed! {get_exception_msg()}')
+            self.log.exception(f'Create batch failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
 
     #3) update upload batch
@@ -130,7 +130,7 @@ class APIInvoker:
             if status == 200: 
                 results = response.json()
                 if results.get("errors"):
-                        self.log.error(f'Update batch failed: {results.get("errors")[0].get("message")}!') 
+                        self.log.error(f'Update batch failed: {results.get("errors")[0].get("message")}.') 
                 else:
                     self.batch = results.get("data").get("updateBatch")
                     if self.batch:
@@ -139,11 +139,11 @@ class APIInvoker:
                         self.log.error('Update batch failed!')
                         return False
             else:
-                self.log.error(f'Update batch failed with status code: {status}.')
+                self.log.error(f'Update batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
                 return False
         except Exception as e:
             self.log.debug(e)
-            self.log.exception(f'Update batch failed! {get_exception_msg()}')
+            self.log.exception(f'Update batch failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
 
 

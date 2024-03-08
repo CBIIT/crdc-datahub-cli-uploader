@@ -36,7 +36,7 @@ class Config():
 
         if args.config:
             if not os.path.isfile(args.config.strip()):
-                self.log.critical(f'Configuration file does not exist, please check the file path: "{args.config}"!')
+                self.log.critical(f'Configuration file “{args.config}” is not readable. Please make sure the path is correct and the file is readable.')
                 return None
             with open(args.config.strip()) as c_file:
                 self.data = yaml.safe_load(c_file)['Config']
@@ -62,24 +62,24 @@ class Config():
         
         apiUrl = self.data.get(API_URL)
         if apiUrl is None:
-            self.log.critical(f'api url is required!')
+            self.log.critical(f'Please provide “api_url” in configuration file or command line argument.')
             return False
 
         token = self.data.get(TOKEN)
         if token is None:
-            self.log.critical(f'token is required!')
+            self.log.critical(f'Please provide “token” in configuration file or command line argument.')
             return False
 
         
         submissionId = self.data.get(SUBMISSION_ID)
         if submissionId is None:
-            self.log.critical(f'submission Id is required!')
+            self.log.critical(f'Please provide “submission” (submission ID) in configuration file or command line argument.')
             return False
 
         retry = self.data.get(RETRIES, 3) #default value is 3
         if isinstance(retry, str):
             if not retry.isdigit():
-                self.log.critical(f'retries is not integer!')
+                self.log.critical(f'Configuration error in “retries”: “{retry}” is not a valid integer.')
                 return False
             else:
                 self.data[retry] =int(retry) 
@@ -98,20 +98,20 @@ class Config():
 
         type = self.data.get(UPLOAD_TYPE)
         if type is None:
-            self.log.critical(f'upload type is required!')
+            self.log.critical(f'Please provide “type” (“metadata” or “data file”) in configuration file or command line argument.')
             return False
         elif type not in UPLOAD_TYPES:
-            self.log.critical(f'{type} is not valid uploading type!')
+            self.log.critical(f'Configuration error in "type": “{type}” is not valid. Valid “type” value can be one of [“data file”, “metadata”]')
             return False
         else:
             if type == TYPE_FILE: #data file
                 #check manifest
                 manifest = self.data.get(PRE_MANIFEST)
                 if manifest is None:
-                    self.log.critical(f'manifest file path is required for file uploading!')
+                    self.log.critical(f'Please provide “manifest” in configuration file or command line argument.')
                     return False
                 if not os.path.isfile(manifest): 
-                    self.log.critical(f'pre-manifest file path is not valid!')
+                    self.log.critical(f'Manifest file “{manifest}” is not readable. Please make sure the path is correct and the file is readable.')
                     return False
                 
                 self.data[PRE_MANIFEST]  = manifest
@@ -132,21 +132,20 @@ class Config():
                 #check intention
                 intention = self.data.get(INTENTION)
                 if intention is None:
-                    self.log.critical(f'intention is required for metadata uploading!')
+                    self.log.critical(f'Please provide “intention” in configuration file or command line argument. Valid “intention” value can be one of [“New”, “Update”, “Delete”]')
                     return False
                 elif intention not in INTENTIONS:
-                    self.log.critical(f'{intention} is not a valid intention!')
+                    self.log.critical(f'Configuration error in “intention”: “{intention}” is not valid. Valid “intention” value can be one of [“New”, “Update”, “Delete”]')
                     return False
         
         filepath = self.data.get(FILE_DIR)
         if filepath is None:
-            self.log.critical(f'data file path is required!')
+            self.log.critical(f'Please provide “data” (path to data files) in configuration file or command line argument.')
             return False
         else:
-            filepath = filepath
             self.data[FILE_DIR]  = filepath
             if not os.path.isdir(filepath): 
-                self.log.critical(f'data file path is not valid!')
+                self.log.critical(f'Configuration error in “data” (path to data files): “{filepath}” is not valid')
                 return False
   
         return True
