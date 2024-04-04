@@ -67,30 +67,32 @@ def controller():
         else:
             temp_credential = apiInvoker.cred
             configs[TEMP_CREDENTIAL] = temp_credential
-
             #step 5: upload all files to designated s3 bucket
             loader = FileUploader(configs, file_list)
-            result = loader.upload()
-            if not result:
-                log.error("Failed to upload files: can't upload files to bucket!")
-                print("Failed to upload files: can't upload files to bucket! Please check log file in tmp folder for details.")
-            else:
-                #write filelist to tsv file and save to result dir
-                print("File uploading completed!")
-            #set fileList for update batch
-            file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item[SUCCEEDED], "errors": item[ERRORS], "skipped": item.get(SKIPPED)} for item in file_list]
-        
-        #step 6: update the batch
-        #uploaded_files: 
-        # (fileName: String
-        # succeeded: Boolean
-        # errors: [String])
-        if apiInvoker.update_batch(newBatch[BATCH_ID], file_array):
-            batch = apiInvoker.batch
-            log.info(f"The batch is updated: {newBatch[BATCH_ID]} with new status: {batch[BATCH_STATUS]} at {batch[BATCH_UPDATED]} ")
-        else:
-            log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
-            print(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
+            try:
+                result = loader.upload()
+                if not result:
+                    log.error("Failed to upload files: can't upload files to bucket!")
+                    print("Failed to upload files: can't upload files to bucket! Please check log file in tmp folder for details.")
+                else:
+                    #write filelist to tsv file and save to result dir
+                    print("File uploading completed!")
+            except KeyboardInterrupt:
+                log.info('File uploading is interrupted.')
+            finally: 
+                #set fileList for update batch
+                file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED)} for item in file_list]
+                #step 6: update the batch
+                #uploaded_files: 
+                # (fileName: String
+                # succeeded: Boolean
+                # errors: [String])
+                if apiInvoker.update_batch(newBatch[BATCH_ID], file_array):
+                    batch = apiInvoker.batch
+                    log.info(f"The batch is updated: {newBatch[BATCH_ID]} with new status: {batch[BATCH_STATUS]} at {batch[BATCH_UPDATED]} ")
+                else:
+                    log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
+                    print(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
     
     else:
         log.error(f"Found total {validator.invalid_count} file(s) are invalid!")
