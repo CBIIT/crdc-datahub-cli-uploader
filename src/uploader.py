@@ -81,7 +81,7 @@ def controller():
                 log.info('File uploading is interrupted.')
             finally: 
                 #set fileList for update batch
-                file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED)} for item in file_list]
+                file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED, False)} for item in file_list]
                 #step 6: update the batch
                 #uploaded_files: 
                 # (fileName: String
