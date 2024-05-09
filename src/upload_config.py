@@ -26,7 +26,7 @@ class Config():
         parser.add_argument('-m', '--md5-field', choices=INTENTIONS ,help='header file size nin manifest, optional, default value is "md5sum"')
         parser.add_argument('-r', '--retries', default=3, type=int, help='file uploading retries, optional, default value is 3')
         #args for metadata type
-        parser.add_argument('-i', '--intention,', help='valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”')
+        parser.add_argument('-i', '--intention,', help='valid value in ["Add", "Add/Change", "Remove"], conditional required when type = “metadata”, default to “new”')
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
@@ -132,10 +132,10 @@ class Config():
                 #check intention
                 intention = self.data.get(INTENTION)
                 if intention is None:
-                    self.log.critical(f'Please provide “intention” in configuration file or command line argument. Valid “intention” value can be one of [“New”, “Update”, “Delete”]')
+                    self.log.critical(f'Please provide “intention” in configuration file or command line argument. Valid “intention” value can be one of ["Add", "Add/Change", "Remove"]')
                     return False
                 elif intention not in INTENTIONS:
-                    self.log.critical(f'Configuration error in “intention”: “{intention}” is not valid. Valid “intention” value can be one of [“New”, “Update”, “Delete”]')
+                    self.log.critical(f'Configuration error in “intention”: “{intention}” is not valid. Valid “intention” value can be one of ["Add", "Add/Change", "Remove"]')
                     return False
         
         filepath = self.data.get(FILE_DIR)

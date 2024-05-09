@@ -62,7 +62,7 @@ Usage of the CLI tool:
     -m --md5-field
     Following argument is needed when type = "metadata"
 
-    -i --intention, valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”
+    -i --intention, valid value in [“Add”, “Add/Change”, “Remove”], conditional required when type = “metadata”, default to “new”
     CLI configuration module will validate and combine parameters from CLI and/or config file
     If config_file is given, then everything else is potentially optional (if it’s included in config file)
     Some arguments are only needed for type = “file” or type = “metadata”, e.g., —intention, —manifest
