@@ -16,17 +16,17 @@ class Config():
         parser.add_argument('-k', '--token', help='API token string, required')
         parser.add_argument('-u', '--submission', help='submission ID, required')
         parser.add_argument('-t', '--type', choices=UPLOAD_TYPES, help='valid value in [“data file”, “metadata”], required')
-        parser.add_argument('-d', '--data', help='folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required')
+        parser.add_argument('-d', '--data', help='folder that contains either data files (type = “data file”) or metadata (TSV/TXT) files (type = “metadata”), required')
         parser.add_argument('--overwrite', default=False, type=bool, help='Overwrite file even same size file already exists at destination, optional, default is false')
         parser.add_argument('--dryrun', default=False, type=bool, help='Only check original file, won\'t copy any files, optional, default is false')
         #args for file type
         parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “file"')
         parser.add_argument('-n', '--name-field', help='header file name in manifest, optional, default value is "file_name"')
         parser.add_argument('-s', '--size-field', help='header file size in manifest, optional, default value is "file_size"')
-        parser.add_argument('-m', '--md5-field', choices=INTENTIONS ,help='header file size nin manifest, optional, default value is "md5sum"')
+        parser.add_argument('-m', '--md5-field', help='header md5 name in manifest, optional, default value is "md5sum"')
         parser.add_argument('-r', '--retries', default=3, type=int, help='file uploading retries, optional, default value is 3')
         #args for metadata type
-        parser.add_argument('-i', '--intention,', help='valid value in ["Add", "Add/Change", "Remove"], conditional required when type = “metadata”, default to “new”')
+        parser.add_argument('-i', '--intention,', choices=INTENTIONS, help='valid value in ["Add", "Add/Change", "Remove"], conditional required when type = “metadata”, default to “add”')
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
