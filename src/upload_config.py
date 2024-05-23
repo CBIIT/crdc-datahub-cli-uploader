@@ -19,7 +19,7 @@ class Config():
         parser.add_argument('-d', '--data', help='folder that contains either data files (type = “data file”) or metadata (TSV/TXT) files (type = “metadata”), required')
         parser.add_argument('--overwrite', default=False, type=bool, help='Overwrite file even same size file already exists at destination, optional, default is false')
         parser.add_argument('--dryrun', default=False, type=bool, help='Only check original file, won\'t copy any files, optional, default is false')
-        #args for file type
+        #args for data file type
         parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “file"')
         parser.add_argument('-n', '--name-field', help='header file name in manifest, optional, default value is "file_name"')
         parser.add_argument('-s', '--size-field', help='header file size in manifest, optional, default value is "file_size"')

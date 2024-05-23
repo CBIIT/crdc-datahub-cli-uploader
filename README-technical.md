@@ -6,7 +6,7 @@ The application is programmed purely with python v3.11.  It depends on bento com
 
 The application is consist of multiple python modules/classes to support multiple functions listed below:
 
-1) Validate local and remote files by verifying md5 and size of files.
+1) Validate local and remote data files and metadata files by verifying md5 and size of files.
 2) Create uploading batch via crdc-datahub backend API.
 3) Create AWS STS temp credential for uploading files to s3 bucket.
 4) Upload both data files and metadata files to S3 bucket.
