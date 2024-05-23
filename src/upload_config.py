@@ -20,13 +20,13 @@ class Config():
         parser.add_argument('--overwrite', default=False, type=bool, help='Overwrite file even same size file already exists at destination, optional, default is false')
         parser.add_argument('--dryrun', default=False, type=bool, help='Only check original file, won\'t copy any files, optional, default is false')
         #args for data file type
-        parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “file"')
+        parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “data file"')
         parser.add_argument('-n', '--name-field', help='header file name in manifest, optional, default value is "file_name"')
         parser.add_argument('-s', '--size-field', help='header file size in manifest, optional, default value is "file_size"')
         parser.add_argument('-m', '--md5-field', help='header md5 name in manifest, optional, default value is "md5sum"')
         parser.add_argument('-r', '--retries', default=3, type=int, help='file uploading retries, optional, default value is 3')
         #args for metadata type
-        parser.add_argument('-i', '--intention,', choices=INTENTIONS, help='valid value in ["Add", "Add/Change", "Remove"], conditional required when type = “metadata”, default to “add”')
+        parser.add_argument('-i', '--intention,', choices=INTENTIONS, help='valid value in ["Add", "Add/Change", "Remove"], conditional required when type = “metadata”, default to “Add”')
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
