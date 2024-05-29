@@ -7,9 +7,9 @@ Config:
     submission: please_copy_submission_ID_from_UI
     #upload type,  valid value in [data file, metadata], required
     type: data file
-    #folder that contains either data files (type = file) or metadata (TSV/TXT) files (type = metadata), required
+    #folder that contains either data files (type = data file) or metadata (TSV/TXT) files (type = metadata), required
     data: /path_to_the_folder_that_contains_your_data_files
-    #path to manifest file, conditional required when type = file
+    #path to manifest file, conditional required when type = data file
     manifest: /path_to_the_manifest_file
     #file name header name in the manifest file, default is file_name
     name-field: file_name
