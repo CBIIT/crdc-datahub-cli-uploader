@@ -7,7 +7,7 @@ Config:
     submission: please_copy_submission_ID_from_UI
     #upload type,  valid value in [data file, metadata], required
     type: metadata
-    #folder that contains either data files (type = file) or metadata (TSV/TXT) files (type = metadata), required
+    #folder that contains either data files (type = data file) or metadata (TSV/TXT) files (type = metadata), required
     data:  /path_to_the_folder_that_contains_your_metadata_files
     #uploading intention, valid value in [Add, Add/Change, Remove],
     intention: Add
