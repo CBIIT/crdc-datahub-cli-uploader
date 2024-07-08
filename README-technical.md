@@ -60,12 +60,10 @@ Usage of the CLI tool:
     -n --name-field
     -s --size-field
     -m --md5-field
-    Following argument is needed when type = "metadata"
 
-    -i --intention, valid value in [“Add”, “Add/Change”, “Remove”], conditional required when type = “metadata”, default to “new”
     CLI configuration module will validate and combine parameters from CLI and/or config file
     If config_file is given, then everything else is potentially optional (if it’s included in config file)
-    Some arguments are only needed for type = “data file” or type = “metadata”, e.g., —intention, —manifest
+    Some arguments are only needed for type = “data file” or type = “metadata”
 
 2) Upload data files command
     $ python src/uploader.py -c configs/test-file-upload.yml

@@ -116,7 +116,6 @@ Put all metadata (TSV) files to be uploaded in the same folder.
 - submission: paste in the submission ID saved in previous steps 
 - type: must be set to “metadata”
 - data: local path to the folder that contains the metadata (TSV) files to be uploaded. All files with .txt or .tsv extensions inside the folder will be uploaded.
-- intention: can be set to one of the following values: "Add”, “Add/Change”, “Remove”
 - retries: number of retries the CLI tool will perform after a failed upload 
 - overwrite: if set to “true”, CLI will upload a file to overwrite the file with same name that already exists in the Data Hub target storage. If set to “false”, CLI will not upload a file if a file with the same name exists in the Data Hub target storage.
 - dryrun: if set to “true”, CLI will not upload any files to the Data Hub target storage. If set to “false”, CLI will upload files to the Data Hub target storage.
