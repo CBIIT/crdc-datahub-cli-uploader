@@ -86,7 +86,7 @@ class FileUploader:
         self.log.info(f'Files failed: {self.files_failed}')
 
         if self.copier.files_exist_at_dest == self.files_processed:
-            self.log.info(f"All files of this batch exist in s3 bucket already! Please check!")
+            self.log.info(f"All files already exist in the cloud storage")
 
         return self.copier.files_copied > 0 or self.copier.files_exist_at_dest == self.files_processed
 

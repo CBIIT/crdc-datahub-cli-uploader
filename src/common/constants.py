@@ -1,13 +1,13 @@
 #define constants, enums, etc.
 #config 
 UPLOAD_TYPE = "type"
-TYPE_FILE ="file"
+TYPE_FILE ="data file"
 TYPE_MATE_DATA= "metadata"
 UPLOAD_TYPES = [TYPE_FILE, TYPE_MATE_DATA]
 INTENTION = "intention"
-INTENTION_NEW = "New"
-INTENTION_UPDATE = "Update"
-INTENTION_DELETE = "Delete"
+INTENTION_NEW = "Add"
+INTENTION_UPDATE = "Add/Change"
+INTENTION_DELETE = "Remove"
 INTENTIONS = [INTENTION_NEW, INTENTION_UPDATE, INTENTION_DELETE]
 FILE_NAME_FIELD = "name-field"
 FILE_NAME_DEFAULT = "file_name"  #match data model file name 
@@ -28,6 +28,7 @@ DRY_RUN = "dryrun"
 
 #file validation 
 FILE_INVALID_REASON = "invalid_reason"
+SKIPPED = "skipped"
 
 #upload
 UPLOAD_STATUS ="upload_status"

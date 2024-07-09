@@ -7,7 +7,8 @@ import sys
 
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, BATCH_STATUS, \
-    BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, FILE_PATH
+    BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
+    FILE_PATH, SKIPPED
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
@@ -66,30 +67,32 @@ def controller():
         else:
             temp_credential = apiInvoker.cred
             configs[TEMP_CREDENTIAL] = temp_credential
-
             #step 5: upload all files to designated s3 bucket
             loader = FileUploader(configs, file_list)
-            result = loader.upload()
-            if not result:
-                log.error("Failed to upload files: can't upload files to bucket!")
-                print("Failed to upload files: can't upload files to bucket! Please check log file in tmp folder for details.")
-            else:
-                #write filelist to tsv file and save to result dir
-                print("File uploading completed!")
-            #set fileList for update batch
-            file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item[SUCCEEDED], "errors": item[ERRORS]} for item in file_list]
-        
-        #step 6: update the batch
-        #uploaded_files: 
-        # (fileName: String
-        # succeeded: Boolean
-        # errors: [String])
-        if apiInvoker.update_batch(newBatch[BATCH_ID], file_array):
-            batch = apiInvoker.batch
-            log.info(f"The batch is updated: {newBatch[BATCH_ID]} with new status: {batch[BATCH_STATUS]} at {batch[BATCH_UPDATED]} ")
-        else:
-            log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
-            print(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
+            try:
+                result = loader.upload()
+                if not result:
+                    log.error("Failed to upload files: can't upload files to bucket!")
+                    print("Failed to upload files: can't upload files to bucket! Please check log file in tmp folder for details.")
+                else:
+                    #write filelist to tsv file and save to result dir
+                    print("File uploading completed!")
+            except KeyboardInterrupt:
+                log.info('File uploading is interrupted.')
+            finally: 
+                #set fileList for update batch
+                file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED, False)} for item in file_list]
+                #step 6: update the batch
+                #uploaded_files: 
+                # (fileName: String
+                # succeeded: Boolean
+                # errors: [String])
+                if apiInvoker.update_batch(newBatch[BATCH_ID], file_array):
+                    batch = apiInvoker.batch
+                    log.info(f"The batch is updated: {newBatch[BATCH_ID]} with new status: {batch[BATCH_STATUS]} at {batch[BATCH_UPDATED]} ")
+                else:
+                    log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
+                    print(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
     
     else:
         log.error(f"Found total {validator.invalid_count} file(s) are invalid!")

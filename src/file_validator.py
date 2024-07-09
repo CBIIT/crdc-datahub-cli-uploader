@@ -107,19 +107,22 @@ class FileValidator:
     #public function to read pre-manifest and return list of file records 
     def read_manifest(self):
         files_info = []
+        files_dict = {}
         try:
             with open(self.pre_manifest) as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
                 self.field_names = clean_up_strs(reader.fieldnames)
                 for info in reader:
                     file_info = clean_up_key_value(info)
-                    files_info.append({
-                        FILE_NAME_DEFAULT: file_info[self.configs.get(FILE_NAME_FIELD)],
+                    file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
+                    files_dict.update({file_name: {
+                        FILE_NAME_DEFAULT: file_name,
                         FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
                         MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
-                    })
+                    }})
+            files_info  =  list(files_dict.values())
         except Exception as e:
             self.log.debug(e)
-            self.log.exception(f"Failed to read pre-manifest file! {get_exception_msg}")
+            self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
         return files_info
 

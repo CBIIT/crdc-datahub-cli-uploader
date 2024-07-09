@@ -1,26 +1,26 @@
 Config:
     #API endpoint URL, required
-    api-url: http://localhost:4020/api/graphql
+    api-url: https://hub.datacommons.cancer.gov/api/graphql
     #API token string, required
-    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Inlvb3M0QG5paC5nb3YiLCJJR
+    token: please_download_your_token_from_UI
     #submission ID, required
-    submission: 2f42b5f1-5ea4-4923-a9bb-f496c63362ce
-    #upload type,  valid value in [file, metadata], required
-    type: file
-    #folder that contains either data files (type = file) or metadata (TSV/TXT) files (type = metadata), required
-    data: /Users/noname/workspace/testdata/PRECINCT01-2023-08-21/
-    #path to manifest file, conditional required when type = file
-    manifest: /Users/noname/workspace/testdata/PRECINCT01-2023-08-21/PRECINCT01 File Transfer Manifest - Study Files x3.txt
+    submission: please_copy_submission_ID_from_UI
+    #upload type,  valid value in [data file, metadata], required
+    type: data file
+    #folder that contains either data files (type = data file) or metadata (TSV/TXT) files (type = metadata), required
+    data: /path_to_the_folder_that_contains_your_data_files
+    #path to manifest file, conditional required when type = data file
+    manifest: /path_to_the_manifest_file
     #file name header name in the manifest file, default is file_name
     name-field: file_name
     #file size header name in the manifest file, default is file_size
-    size-field: original_file_size
+    size-field: file_size
     #file md5 header name in the manifest file, default is md5sum
-    md5-field: original_md5sum
+    md5-field: md5sum
     #file uploading retries
     retries: 3
     # if overwrite existed file
-    overwrite: true
+    overwrite: false
     # if only run file validation without uploading
     dryrun: false
 

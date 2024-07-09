@@ -15,18 +15,18 @@ class Config():
         parser.add_argument('-a', '--api-url', help='API endpoint URL, required')
         parser.add_argument('-k', '--token', help='API token string, required')
         parser.add_argument('-u', '--submission', help='submission ID, required')
-        parser.add_argument('-t', '--type', choices=UPLOAD_TYPES, help='valid value in [“file”, “metadata”], required')
-        parser.add_argument('-d', '--data', help='folder that contains either data files (type = “file”) or metadata (TSV/TXT) files (type = “metadata”), required')
+        parser.add_argument('-t', '--type', choices=UPLOAD_TYPES, help='valid value in [“data file”, “metadata”], required')
+        parser.add_argument('-d', '--data', help='folder that contains either data files (type = “data file”) or metadata (TSV/TXT) files (type = “metadata”), required')
         parser.add_argument('--overwrite', default=False, type=bool, help='Overwrite file even same size file already exists at destination, optional, default is false')
         parser.add_argument('--dryrun', default=False, type=bool, help='Only check original file, won\'t copy any files, optional, default is false')
-        #args for file type
-        parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “file"')
+        #args for data file type
+        parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “data file"')
         parser.add_argument('-n', '--name-field', help='header file name in manifest, optional, default value is "file_name"')
         parser.add_argument('-s', '--size-field', help='header file size in manifest, optional, default value is "file_size"')
-        parser.add_argument('-m', '--md5-field', choices=INTENTIONS ,help='header file size nin manifest, optional, default value is "md5sum"')
+        parser.add_argument('-m', '--md5-field', help='header md5 name in manifest, optional, default value is "md5sum"')
         parser.add_argument('-r', '--retries', default=3, type=int, help='file uploading retries, optional, default value is 3')
         #args for metadata type
-        parser.add_argument('-i', '--intention,', help='valid value in [“New”, “Update”, “Delete”], conditional required when type = “metadata”, default to “new”')
+        parser.add_argument('-i', '--intention,', choices=INTENTIONS, help='valid value in ["Add", "Add/Change", "Remove"], conditional required when type = “metadata”, default to “Add”')
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
@@ -36,7 +36,7 @@ class Config():
 
         if args.config:
             if not os.path.isfile(args.config.strip()):
-                self.log.critical(f'Configuration file does not exist, please check the file path: "{args.config}"!')
+                self.log.critical(f'Configuration file “{args.config}” is not readable. Please make sure the path is correct and the file is readable.')
                 return None
             with open(args.config.strip()) as c_file:
                 self.data = yaml.safe_load(c_file)['Config']
@@ -62,24 +62,24 @@ class Config():
         
         apiUrl = self.data.get(API_URL)
         if apiUrl is None:
-            self.log.critical(f'api url is required!')
+            self.log.critical(f'Please provide “api_url” in configuration file or command line argument.')
             return False
 
         token = self.data.get(TOKEN)
         if token is None:
-            self.log.critical(f'token is required!')
+            self.log.critical(f'Please provide “token” in configuration file or command line argument.')
             return False
 
         
         submissionId = self.data.get(SUBMISSION_ID)
         if submissionId is None:
-            self.log.critical(f'submission Id is required!')
+            self.log.critical(f'Please provide “submission” (submission ID) in configuration file or command line argument.')
             return False
 
         retry = self.data.get(RETRIES, 3) #default value is 3
         if isinstance(retry, str):
             if not retry.isdigit():
-                self.log.critical(f'retries is not integer!')
+                self.log.critical(f'Configuration error in “retries”: “{retry}” is not a valid integer.')
                 return False
             else:
                 self.data[retry] =int(retry) 
@@ -98,20 +98,20 @@ class Config():
 
         type = self.data.get(UPLOAD_TYPE)
         if type is None:
-            self.log.critical(f'upload type is required!')
+            self.log.critical(f'Please provide “type” (“metadata” or “data file”) in configuration file or command line argument.')
             return False
         elif type not in UPLOAD_TYPES:
-            self.log.critical(f'{type} is not valid uploading type!')
+            self.log.critical(f'Configuration error in "type": “{type}” is not valid. Valid “type” value can be one of [“data file”, “metadata”]')
             return False
         else:
-            if type == TYPE_FILE: #file
+            if type == TYPE_FILE: #data file
                 #check manifest
                 manifest = self.data.get(PRE_MANIFEST)
                 if manifest is None:
-                    self.log.critical(f'manifest file path is required for file uploading!')
+                    self.log.critical(f'Please provide “manifest” in configuration file or command line argument.')
                     return False
                 if not os.path.isfile(manifest): 
-                    self.log.critical(f'pre-manifest file path is not valid!')
+                    self.log.critical(f'Manifest file “{manifest}” is not readable. Please make sure the path is correct and the file is readable.')
                     return False
                 
                 self.data[PRE_MANIFEST]  = manifest
@@ -130,26 +130,22 @@ class Config():
 
             elif type == TYPE_MATE_DATA: #metadata
                 #check intention
-                # based on requirement in ticket 456, in MVP2 M2 the intention is always New
-                self.data[INTENTION] = INTENTION_NEW #New
-        
-                # intention = self.data.get(INTENTION)
-                # if intention is None:
-                #     self.log.critical(f'intention is required for metadata uploading!')
-                #     return False
-                # elif intention not in INTENTIONS:
-                #     self.log.critical(f'{intention} is not a valid intention!')
-                #     return False
+                intention = self.data.get(INTENTION)
+                if intention is None:
+                    self.log.critical(f'Please provide “intention” in configuration file or command line argument. Valid “intention” value can be one of ["Add", "Add/Change", "Remove"]')
+                    return False
+                elif intention not in INTENTIONS:
+                    self.log.critical(f'Configuration error in “intention”: “{intention}” is not valid. Valid “intention” value can be one of ["Add", "Add/Change", "Remove"]')
+                    return False
         
         filepath = self.data.get(FILE_DIR)
         if filepath is None:
-            self.log.critical(f'data file path is required!')
+            self.log.critical(f'Please provide “data” (path to data files) in configuration file or command line argument.')
             return False
         else:
-            filepath = filepath
             self.data[FILE_DIR]  = filepath
             if not os.path.isdir(filepath): 
-                self.log.critical(f'data file path is not valid!')
+                self.log.critical(f'Configuration error in “data” (path to data files): “{filepath}” is not valid')
                 return False
   
         return True

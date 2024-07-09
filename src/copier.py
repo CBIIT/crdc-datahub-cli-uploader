@@ -7,7 +7,8 @@ from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, ge
 
 from common.graphql_client import APIInvoker
 from common.s3util import S3Bucket
-from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, ERRORS
+from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, \
+    ERRORS, SKIPPED
 from common.utils import get_exception_msg
 class Copier:
 
@@ -90,39 +91,41 @@ class Copier:
                        }
 
             if dryrun:           
-                self.log.info(f'Copying file {key} skipped (dry run)')
+                self.log.info(f'Uploading “{file_name}” skipped (dry run)')
                 return succeed
             
             if not overwrite and self.bucket.same_size_file_exists(key, org_size):
-                self.log.info(f'File skipped: same size file exists at: "{key.strip("/")}"')
+                self.log.info(f'Uploading “{file_name}” skipped - file with same name and size already exists in the cloud storage')
                 self.files_exist_at_dest += 1
+                file_info[SKIPPED] = True
                 return succeed
 
             #self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
             self.log.info(f'Copying from {org_url} to destination folder in S3 bucket ...')
             dest_size = self._upload_obj(org_url, key, org_size)
             if dest_size != org_size:
-                self.log.error(f'Copy failed: destination file size is different from original!')
+                self.log.error(f'Uploading “{file_name}” failed - uploading was not complete. Please try again and contact the helpdesk if this error persists.')
                 return {self.STATUS: False}
 
             return succeed
         except ClientError as ce:
             self.log.debug(ce)
-            self.log.exception(f"Failed uploading file,{file_name} to {self.bucket_name}! {get_exception_msg()}.")
+
             #handle temp credential expired error to refresh token for next file.
             if ce.response[u'Error'][u'Code'] == 'ExpiredToken':
-                self.log.exception(f'Copy file failed, AWS Token expired! {get_exception_msg()}.')
-                file_info[ERRORS] = [f'Copy file failed, AWS Token expired!! {get_exception_msg()}']
+                self.log.exception(f'Uploading “{file_name}” failed - internal error: temporary credential expired. Please try again and contact the helpdesk if this error persists.')
+                file_info[ERRORS] = [f'Uploading “{file_name}” failed - internal error: temporary credential expired.']
                 if self.refreshToken(): 
                     self.bucket.set_s3_client(self.bucket_name, self.configs[TEMP_CREDENTIAL])
             else:
-                file_info[ERRORS] = [f'Copy file failed with S3 client error! {get_exception_msg()}.']
+                self.log.exception(f"Uploading “{file_name}” failed - internal error. Please try again and contact the helpdesk if this error persists..")
+                file_info[ERRORS] = [f'Uploading “{file_name}” failed - network error.']
 
             return {self.STATUS: False}
         except Exception as e:
             self.log.debug(e)
-            self.log.exception('Copy file failed! Check debug log for detailed information.')
-            file_info[ERRORS] = [f"Copy file failed! {get_exception_msg()}."]
+            self.log.exception(f'Uploading “{file_name}” failed - network error. Please try again and contact the helpdesk if this error persists.')
+            file_info[ERRORS] = [f"Uploading “{file_name}” failed - internal error."]
             return {self.STATUS: False}
 
     def _upload_obj(self, org_url, key, org_size):
