@@ -4,7 +4,7 @@ import yaml
 import sys
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, RETRIES, OVERWRITE, \
-        DRY_RUN, TYPE_FILE
+    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX
 from bento.common.utils import get_logger
 from common.utils import clean_up_key_value
 
@@ -24,6 +24,9 @@ class Config():
         parser.add_argument('-n', '--name-field', help='header file name in manifest, optional, default value is "file_name"')
         parser.add_argument('-s', '--size-field', help='header file size in manifest, optional, default value is "file_size"')
         parser.add_argument('-m', '--md5-field', help='header md5 name in manifest, optional, default value is "md5sum"')
+        parser.add_argument('-i', '--id-field', help='header file ID name in manifest, optional, default value is "file_id"')
+        parser.add_argument('-o', '--omit-DCF-prefix', help='boolean to define if need DCF prefix "dg.4DFC"')
+
         parser.add_argument('-r', '--retries', default=3, type=int, help='file uploading retries, optional, default value is 3')
 
         #for better user experience, using configuration file to pass all args above
@@ -125,6 +128,15 @@ class Config():
                 md5_header = self.data.get(FILE_MD5_FIELD)
                 if  md5_header is None:
                     self.data[FILE_MD5_FIELD] = MD5_DEFAULT
+
+                file_id_header= self.data.get(FILE_ID_FIELD)
+                if file_id_header is None:
+                    self.log.critical(f'file id field is required.')
+                    return False
+                 
+                omit_dcf_prefix = self.data.get(OMIT_DCF_PREFIX)
+                if omit_dcf_prefix is None:
+                    self.data[OMIT_DCF_PREFIX] = False
         
         filepath = self.data.get(FILE_DIR)
         if filepath is None:
