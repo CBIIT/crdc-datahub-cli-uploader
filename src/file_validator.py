@@ -27,6 +27,9 @@ class FileValidator:
         self.fileList = [] #list of files object {file_name, file_path, file_size, invalid_reason}
         self.log = get_logger('File_Validator')
         self.invalid_count = 0
+        self.has_file_id = False
+        self.manifest_rows = None
+        self.field_names = None
 
     def validate(self):
         # check file dir
@@ -65,6 +68,7 @@ class FileValidator:
         self.files_info =  self.read_manifest()
         if not self.files_info or len(self.files_info ) == 0:
             return False
+        self.has_file_id = FILE_ID_FIELD in self.files_info[0].keys()
         line_num = 2
         for info in self.files_info:
             invalid_reason = ""
@@ -115,12 +119,15 @@ class FileValidator:
     def read_manifest(self):
         files_info = []
         files_dict = {}
+        manifest_rows = []
         try:
             with open(self.pre_manifest) as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
-                self.field_names = clean_up_strs(reader.fieldnames)
+                if not self.field_names:
+                    self.field_names = clean_up_strs(reader.fieldnames)
                 for info in reader:
                     file_info = clean_up_key_value(info)
+                    manifest_rows.append(file_info)
                     file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
                     file_id = file_info[self.configs.get(FILE_ID_FIELD)]
                     files_dict.update({file_name: {
@@ -130,6 +137,7 @@ class FileValidator:
                         MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
                     }})
             files_info  =  list(files_dict.values())
+            self.manifest_rows = manifest_rows
         except Exception as e:
             self.log.debug(e)
             self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
@@ -140,7 +148,7 @@ class FileValidator:
         if id:
             if self.configs[OMIT_DCF_PREFIX] == False:
                 msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like \
-                    "dg.4DFC/e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you'
+                    "dg.4DFC/e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
                 if not id.startswith("dg.4DFC/"):
                     self.log.error(msg)
                     return False, msg
@@ -152,9 +160,14 @@ class FileValidator:
             else:
                 if(not is_valid_uuid(id)):
                     msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like \
-                    "e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you'
+                    "e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
                     self.log.error(msg)
                     return False, msg 
+        else:
+            if self.has_file_id:
+                msg = f'Line {line_num}: "{id_field_name}" is required but not provided. You can provide correct "{id_field_name}" or remove the column and \
+                    let the system generate it for you.'
+                self.log.error(msg)
+                return False, msg
                 
         return True, None
-
