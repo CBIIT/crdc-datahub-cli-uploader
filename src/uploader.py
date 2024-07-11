@@ -79,7 +79,7 @@ def controller():
                     #write filelist to tsv file and save to result dir
                     print("File uploading completed!")
                     # process manifest file
-                    process_manifest_file(configs.copy(), validator.has_file_id, file_list, validator.manifest_rows, validator.field_names)
+                    process_manifest_file(configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)
             except KeyboardInterrupt:
                 log.info('File uploading is interrupted.')
             finally: 

@@ -11,6 +11,10 @@ Config:
     data: /path_to_the_folder_that_contains_your_data_files
     #path to manifest file, conditional required when type = data file
     manifest: /path_to_the_manifest_file
+    #file id header name in the manifest file in data model, file_id for CDS
+    id-field: file_id
+    # if id_field need to be DCF prefix id, read from data model content.json
+    omit-DCF-prefix: false
     #file name header name in the manifest file, default is file_name
     name-field: file_name
     #file size header name in the manifest file, default is file_size

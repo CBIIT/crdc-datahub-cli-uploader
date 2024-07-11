@@ -1,18 +1,18 @@
 import csv, os, io
 from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, BATCH, BATCH_CREATED,\
-    FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS
+    FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST
 from common.graphql_client import APIInvoker
 from copier import Copier
 
 
-def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, columns):
+def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manifest_columns):
     if not file_infos or len(file_infos) == 0:
         print(f"Failed to add file id to the pre-manifest, {file_path}.")
         return False
-    file_path = configs.get('manifest_file')
-    final_manifest_path = str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(".txt", "-final.tsv") if not has_file_id else file_path
+    file_path = configs.get(PRE_MANIFEST)
+    final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if not has_file_id else file_path
     file_id_name = configs[FILE_ID_FIELD]
-    manifest_columns = columns.append(file_id_name)
+    manifest_columns.append(file_id_name)
     result = None
     newBatch = None
     manifest_file_info = None
@@ -23,7 +23,7 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, colum
                 print(f"Failed to add file id to the pre-manifest, {file_path}.")
                 return False
         # create a batch for upload the final manifest file
-        manifest_file_info = {"fileName": final_manifest_name, "size": manifest_file_size} 
+        manifest_file_info = {"fileName": final_manifest_path, "size": manifest_file_size} 
         configs[UPLOAD_TYPE] = "metadata"
         apiInvoker = APIInvoker(configs)
         manifest_file_size = os.path.getsize(final_manifest_path)
@@ -63,7 +63,7 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, colum
 def add_file_id(file_id_name, final_manifest_path, file_infos, manifest_rows, manifest_columns):
     output = []
     for file in file_infos:
-        row = next([row for row in manifest_rows if row[FILE_NAME_FIELD] == file["fileName"]])
+        row = [row for row in manifest_rows if row[FILE_NAME_DEFAULT] == file["fileName"]][0]
         row[file_id_name] = file[FILE_ID_DEFAULT]
         output.append(row)
     with open(final_manifest_path, 'w') as f: 

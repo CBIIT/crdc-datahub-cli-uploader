@@ -129,7 +129,7 @@ class FileValidator:
                     file_info = clean_up_key_value(info)
                     manifest_rows.append(file_info)
                     file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
-                    file_id = file_info[self.configs.get(FILE_ID_FIELD)]
+                    file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
                     files_dict.update({file_name: {
                         FILE_ID_DEFAULT: file_id,
                         FILE_NAME_DEFAULT: file_name,
