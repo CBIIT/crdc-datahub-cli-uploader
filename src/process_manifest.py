@@ -18,15 +18,15 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
     manifest_file_info = None
     try:
         if not has_file_id:
-            result = add_file_id(file_id_name, file_path, file_infos, manifest_rows, manifest_columns)
+            result = add_file_id(file_id_name, final_manifest_path , file_infos, manifest_rows, manifest_columns)
             if not result:
-                print(f"Failed to add file id to the pre-manifest, {file_path}.")
+                print(f"Failed to add file id to the pre-manifest, {final_manifest_path }.")
                 return False
         # create a batch for upload the final manifest file
+        manifest_file_size = os.path.getsize(final_manifest_path)
         manifest_file_info = {"fileName": final_manifest_path, "size": manifest_file_size} 
         configs[UPLOAD_TYPE] = "metadata"
         apiInvoker = APIInvoker(configs)
-        manifest_file_size = os.path.getsize(final_manifest_path)
         final_manifest_name = os.path.basename(final_manifest_path)
         file_array = [{"fileName": final_manifest_name, "size": manifest_file_size}]
         newBatch = None
@@ -65,7 +65,7 @@ def add_file_id(file_id_name, final_manifest_path, file_infos, manifest_rows, ma
     for file in file_infos:
         row = [row for row in manifest_rows if row[FILE_NAME_DEFAULT] == file["fileName"]][0]
         row[file_id_name] = file[FILE_ID_DEFAULT]
-        output.append(row)
+        output.append(row.values())
     with open(final_manifest_path, 'w') as f: 
         writer = csv.writer(f, delimiter='\t')
         writer.writerow(manifest_columns)

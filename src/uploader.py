@@ -8,7 +8,7 @@ import sys
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, FILE_ID_FIELD
+    FILE_PATH, SKIPPED, FILE_ID_FIELD, TYPE_FILE
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
@@ -78,8 +78,9 @@ def controller():
                 else:
                     #write filelist to tsv file and save to result dir
                     print("File uploading completed!")
-                    # process manifest file
-                    process_manifest_file(configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)
+                    if configs[UPLOAD_TYPE] == TYPE_FILE:
+                        # process manifest file
+                        process_manifest_file(configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)
             except KeyboardInterrupt:
                 log.info('File uploading is interrupted.')
             finally: 

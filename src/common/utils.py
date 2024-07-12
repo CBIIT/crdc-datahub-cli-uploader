@@ -48,7 +48,7 @@ def dump_dict_to_tsv(dict_list, file_path):
         dict_writer.writerows(dict_list) 
     return True
 
-def is_valid_uuid(uuid_to_test, version=4):
+def is_valid_uuid(uuid_to_test, version=5):
     """
     Check if uuid_to_test is a valid UUID.
     
@@ -71,8 +71,12 @@ def is_valid_uuid(uuid_to_test, version=4):
     
     try:
         uuid_obj = UUID(uuid_to_test, version=version)
+        uuid_str = str(uuid_obj)
+        if uuid_str == uuid_to_test:
+            return True
+        else:
+            return is_valid_uuid(uuid_to_test, int(version)-1)    
     except ValueError:
         return False
-    return str(uuid_obj) == uuid_to_test
 
 

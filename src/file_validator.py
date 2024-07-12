@@ -27,7 +27,7 @@ class FileValidator:
         self.fileList = [] #list of files object {file_name, file_path, file_size, invalid_reason}
         self.log = get_logger('File_Validator')
         self.invalid_count = 0
-        self.has_file_id = False
+        self.has_file_id = None
         self.manifest_rows = None
         self.field_names = None
 
@@ -68,7 +68,6 @@ class FileValidator:
         self.files_info =  self.read_manifest()
         if not self.files_info or len(self.files_info ) == 0:
             return False
-        self.has_file_id = FILE_ID_FIELD in self.files_info[0].keys()
         line_num = 2
         for info in self.files_info:
             invalid_reason = ""
@@ -130,6 +129,8 @@ class FileValidator:
                     manifest_rows.append(file_info)
                     file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
                     file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
+                    if self.has_file_id is None:
+                        self.has_file_id = FILE_ID_DEFAULT in info.keys()
                     files_dict.update({file_name: {
                         FILE_ID_DEFAULT: file_id,
                         FILE_NAME_DEFAULT: file_name,
@@ -154,7 +155,7 @@ class FileValidator:
                     return False, msg
                 else:
                     uuid = id.split('/')[1]
-                    if(not is_valid_uuid(uuid)):
+                    if not is_valid_uuid(uuid):
                         self.log.error(msg)
                         return False, msg  
             else:
