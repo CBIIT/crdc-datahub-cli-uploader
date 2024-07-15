@@ -91,6 +91,8 @@ You can put a manifest in the same folder with the data files, or you can put it
 - name-field: column name in the manifest file that contains data file names
 - size-field: column name in the manifest file that contains data file sizes
 - md5-field: column name in the manifest file that contains data file MD5 checksums
+- id-field: column name in the manifest file that contains data file ID
+- omit-DCF-prefix: boolean to define if need DCF prefix "dg.4DFC"
 - retries: number of retries the CLI tool will perform after a failed upload 
 - overwrite: if set to “true”, CLI will upload a data file to overwrite the data file with same name that already exists in the Data Hub target storage. If set to “false”, CLI will not upload a data file if a data file with the same name exists in the Data Hub target storage.
 - dryrun: if set to “true”, CLI will not upload any data files to the Data Hub target storage. If set to “false”, CLI will upload data files to the Data Hub target storage.

@@ -6,6 +6,24 @@ from copier import Copier
 
 
 def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manifest_columns):
+    """
+    function: process_manifest_file
+    params:
+     configs: the config object of uploader
+     file_path: the path of the pre-manifest file
+     has_file_id: whether the pre-manifest file has file id column or not
+     file_infos: the file info array of the pre-manifest file
+     manifest_rows: the rows of the pre-manifest file
+     manifest_columns: the columns of the pre-manifest file
+    return:
+     True or False
+
+     steps:
+     1) add file id to the pre-manifest file if no file id column
+     2) create a batch for upload the final manifest file
+     3) upload the final manifest file to S3
+     4) update the batch with file info.
+    """
     if not file_infos or len(file_infos) == 0:
         print(f"Failed to add file id to the pre-manifest, {file_path}.")
         return False
