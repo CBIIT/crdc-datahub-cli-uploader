@@ -130,7 +130,7 @@ class FileValidator:
                     file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
                     file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
                     if self.has_file_id is None:
-                        self.has_file_id = FILE_ID_DEFAULT in info.keys()
+                        self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
                     files_dict.update({file_name: {
                         FILE_ID_DEFAULT: file_id,
                         FILE_NAME_DEFAULT: file_name,
