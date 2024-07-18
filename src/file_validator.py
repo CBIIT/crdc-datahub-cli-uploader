@@ -148,8 +148,7 @@ class FileValidator:
         id_field_name = self.configs.get(FILE_ID_FIELD)
         if id:
             if self.configs[OMIT_DCF_PREFIX] == False:
-                msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like \
-                    "dg.4DFC/e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
+                msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like "dg.4DFC/e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
                 if not id.startswith("dg.4DFC/"):
                     self.log.error(msg)
                     return False, msg
@@ -160,14 +159,12 @@ class FileValidator:
                         return False, msg  
             else:
                 if(not is_valid_uuid(id)):
-                    msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like \
-                    "e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
+                    msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like "e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
                     self.log.error(msg)
                     return False, msg 
         else:
             if self.has_file_id:
-                msg = f'Line {line_num}: "{id_field_name}" is required but not provided. You can provide correct "{id_field_name}" or remove the column and \
-                    let the system generate it for you.'
+                msg = f'Line {line_num}: "{id_field_name}" is required but not provided. You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
                 self.log.error(msg)
                 return False, msg
                 
