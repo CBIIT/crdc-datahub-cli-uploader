@@ -67,6 +67,10 @@ class APIInvoker:
                 filePrefix,
                 type,
                 fileCount,
+                files {{
+                    fileID, 
+                    fileName,
+                }}
                 status,
                 createdAt
             }}
