@@ -84,7 +84,7 @@ def add_file_id(file_id_name, final_manifest_path, file_infos, manifest_rows, ma
         row = [row for row in manifest_rows if row[FILE_NAME_DEFAULT] == file["fileName"]][0]
         row[file_id_name] = file[FILE_ID_DEFAULT]
         output.append(row.values())
-    with open(final_manifest_path, 'w') as f: 
+    with open(final_manifest_path, 'w', newline='') as f: 
         writer = csv.writer(f, delimiter='\t')
         writer.writerow(manifest_columns)
         writer.writerows(output)
