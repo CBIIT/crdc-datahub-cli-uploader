@@ -30,13 +30,14 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
     file_path = configs.get(PRE_MANIFEST)
     final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if not has_file_id else file_path
     file_id_name = configs[FILE_ID_FIELD]
+    file_name_name = configs[FILE_NAME_FIELD]
     manifest_columns.append(file_id_name)
     result = None
     newBatch = None
     manifest_file_info = None
     try:
         if not has_file_id:
-            result = add_file_id(file_id_name, final_manifest_path , file_infos, manifest_rows, manifest_columns)
+            result = add_file_id(file_id_name, file_name_name, final_manifest_path , file_infos, manifest_rows, manifest_columns)
             if not result:
                 print(f"Failed to add file id to the pre-manifest, {final_manifest_path }.")
                 return False
@@ -78,10 +79,10 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
         return True
 
 # This method will create a new manifest file with the file id column added to the pre-manifest.
-def add_file_id(file_id_name, final_manifest_path, file_infos, manifest_rows, manifest_columns):
+def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, manifest_rows, manifest_columns):
     output = []
     for file in file_infos:
-        row = [row for row in manifest_rows if row[FILE_NAME_DEFAULT] == file["fileName"]][0]
+        row = [row for row in manifest_rows if row[file_name_name] == file["fileName"]][0]
         row[file_id_name] = file[FILE_ID_DEFAULT]
         output.append(row.values())
     with open(final_manifest_path, 'w', newline='') as f: 
