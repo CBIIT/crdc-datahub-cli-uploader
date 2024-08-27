@@ -1,19 +1,25 @@
 Config:
     #API endpoint URL, required
     api-url: https://hub.datacommons.cancer.gov/api/graphql
+
     #API token string, required
     token: please_download_your_token_from_UI
+
     #submission ID, required
     submission: please_copy_submission_ID_from_UI
+
     #upload type,  valid value in [data file, metadata], required
     type: metadata
+
     #folder that contains either data files (type = data file) or metadata (TSV/TXT) files (type = metadata), required
     data:  /path_to_the_folder_that_contains_your_metadata_files
+
     #file uploading retries
     retries: 3
+
      # if overwrite existed file
     overwrite: false
+
     # if only run file validation without uploading
     dryrun: false
-
    

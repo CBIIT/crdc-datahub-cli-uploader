@@ -1,31 +1,42 @@
 Config:
-    #API endpoint URL, required
+    # API endpoint URL, required
     api-url: https://hub.datacommons.cancer.gov/api/graphql
-    #API token string, required
+
+    # API token string, required
     token: please_download_your_token_from_UI
-    #submission ID, required
+
+    # submission ID, required
     submission: please_copy_submission_ID_from_UI
-    #upload type,  valid value in [data file, metadata], required
+
+    # upload type,  valid value in [data file, metadata], required
     type: data file
-    #folder that contains either data files (type = data file) or metadata (TSV/TXT) files (type = metadata), required
+
+    # folder that contains either data files (type = data file) or metadata (TSV/TXT) files (type = metadata), required
     data: /path_to_the_folder_that_contains_your_data_files
-    #path to manifest file, conditional required when type = data file
+
+    # path to manifest file, conditional required when type = data file
     manifest: /path_to_the_manifest_file
-    #file id header name in the manifest file in data model, file_id for CDS
+
+    # Property name for Key/ID property of file node. For example, "file_id" is the Key/ID property of file node in CDS.
     id-field: file_id
-    # if id_field need to be DCF prefix id, read from data model content.json
+
+    # Whether to omit DCF prefix when generating file IDs. For example, false means include DCF prefix when generating file IDs.
     omit-DCF-prefix: false
-    #file name header name in the manifest file, default is file_name
+
+    # file name header name in the manifest file. For example, "file_name" is the header name for CDS.
     name-field: file_name
-    #file size header name in the manifest file, default is file_size
+
+    # file size header name in the manifest file. For example, "file_size" is the header name for CDS.
     size-field: file_size
-    #file md5 header name in the manifest file, default is md5sum
+
+    # file md5 header name in the manifest file. For example, "md5sum" is the header name for CDS.
     md5-field: md5sum
-    #file uploading retries
+
+    # file uploading retries
     retries: 3
+
     # if overwrite existed file
     overwrite: false
+
     # if only run file validation without uploading
     dryrun: false
-
-
