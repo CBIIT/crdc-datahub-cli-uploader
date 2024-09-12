@@ -99,7 +99,8 @@ class Copier:
                 self.files_exist_at_dest += 1
                 file_info[SKIPPED] = True
                 return succeed
-
+            else: 
+                file_info[SKIPPED] = False
             #self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
             self.log.info(f'Copying from {org_url} to destination folder in S3 bucket ...')
             dest_size = self._upload_obj(org_url, key, org_size)
