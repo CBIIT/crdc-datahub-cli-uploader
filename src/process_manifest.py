@@ -83,7 +83,7 @@ def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, m
     output = []
     for file in file_infos:
         row = [row for row in manifest_rows if row[file_name_name] == file["fileName"]][0]
-        file[FILE_ID_DEFAULT] = file[FILE_ID_DEFAULT] if omit_prefix != True else file[FILE_ID_DEFAULT].replace(DCF_PREFIX, "")
+        file[FILE_ID_DEFAULT] = file[FILE_ID_DEFAULT] if omit_prefix == False else file[FILE_ID_DEFAULT].replace(DCF_PREFIX, "")
         row[file_id_name] = file[FILE_ID_DEFAULT]
         output.append(row.values())
     with open(final_manifest_path, 'w', newline='') as f: 
