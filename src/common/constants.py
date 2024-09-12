@@ -13,6 +13,7 @@ FILE_MD5_FIELD = "md5-field"
 FILE_ID_FIELD = "id-field"
 FILE_ID_DEFAULT = "fileID"
 OMIT_DCF_PREFIX = "omit-DCF-prefix"
+DCF_PREFIX = "dg.4DFC/"
 MD5_DEFAULT = "md5sum" #match data model md5 name
 TOKEN = "token"
 API_URL = "api-url"

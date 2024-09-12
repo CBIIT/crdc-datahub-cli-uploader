@@ -1,6 +1,6 @@
 import csv, os, io
-from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, BATCH, BATCH_CREATED,\
-    FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST
+from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, DCF_PREFIX, BATCH_CREATED,\
+    FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX
 from common.graphql_client import APIInvoker
 from copier import Copier
 
@@ -37,7 +37,7 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
     manifest_file_info = None
     try:
         if not has_file_id:
-            result = add_file_id(file_id_name, file_name_name, final_manifest_path , file_infos, manifest_rows, manifest_columns)
+            result = add_file_id(file_id_name, file_name_name, final_manifest_path , file_infos, manifest_rows, manifest_columns, configs.get(OMIT_DCF_PREFIX))
             if not result:
                 print(f"Failed to add file id to the pre-manifest, {final_manifest_path }.")
                 return False
@@ -79,15 +79,15 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
         return True
 
 # This method will create a new manifest file with the file id column added to the pre-manifest.
-def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, manifest_rows, manifest_columns):
+def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, manifest_rows, manifest_columns, omit_prefix):
     output = []
     for file in file_infos:
         row = [row for row in manifest_rows if row[file_name_name] == file["fileName"]][0]
+        file[FILE_ID_DEFAULT] = file[FILE_ID_DEFAULT] if omit_prefix == False else file[FILE_ID_DEFAULT].replace(DCF_PREFIX, "")
         row[file_id_name] = file[FILE_ID_DEFAULT]
         output.append(row.values())
     with open(final_manifest_path, 'w', newline='') as f: 
         writer = csv.writer(f, delimiter='\t')
         writer.writerow(manifest_columns)
         writer.writerows(output)
-
     return True
