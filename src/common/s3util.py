@@ -14,15 +14,23 @@ class S3Bucket:
 
     def set_s3_client(self, bucket, credentials):
         self.bucket_name = bucket
-        self.credential = credentials
-        session = boto3.session.Session(
-            aws_access_key_id=credentials[ACCESS_KEY_ID],
-            aws_secret_access_key=credentials[SECRET_KEY],
-            aws_session_token=credentials[SESSION_TOKEN]
-        )
-        self.client = session.client('s3')
-        self.s3 = session.resource('s3')
-        self.bucket = self.s3.Bucket(bucket)
+        
+        if credentials and bucket:
+            self.credential = credentials
+            session = boto3.session.Session(
+                aws_access_key_id=credentials[ACCESS_KEY_ID],
+                aws_secret_access_key=credentials[SECRET_KEY],
+                aws_session_token=credentials[SESSION_TOKEN]
+            )
+            self.client = session.client('s3')
+            self.s3 = session.resource('s3')
+            self.bucket = self.s3.Bucket(bucket)
+            
+        else:
+            self.client = boto3.client('s3')
+            self.credential = None
+        
+       
 
     def put_file_obj(self, key, data, md5_base64):
         return self.bucket.put_object(Key=key,
@@ -43,4 +51,16 @@ class S3Bucket:
 
     def same_size_file_exists(self, key, file_size):
         return file_size == self.get_object_size(key)
+    
+    def download_object(self, bucket_name, key, local_file_path):
+        try:
+            self.client.download_file(bucket_name, key, local_file_path)
+            return True
+        except ClientError as ce:
+            self.log.error(ce)
+            return False
+        except Exception as e:
+            self.log.error(e)
+            return False
+        
 
