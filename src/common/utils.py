@@ -78,5 +78,9 @@ def is_valid_uuid(uuid_to_test, version=5):
             return is_valid_uuid(uuid_to_test, int(version)-1)    
     except ValueError:
         return False
+    
+def get_uuid(version=4):
+    uuid = UUID(int=version)
+    return str(uuid)
 
 

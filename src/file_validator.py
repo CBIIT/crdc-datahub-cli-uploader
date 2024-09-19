@@ -7,7 +7,8 @@ import glob
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
     FILE_ID_FIELD, OMIT_DCF_PREFIX  
-from common.utils import clean_up_key_value, clean_up_strs, get_exception_msg, is_valid_uuid
+from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid, get_uuid
+from common.s3util import S3Bucket
 from bento.common.utils import get_logger, get_md5
 
 
@@ -16,13 +17,14 @@ For files: read manifest file and validate local files’ sizes and md5s
 For metadata: validate data folder contains TSV or TXT files
 Compose a list of files to be updated and their sizes (metadata or files)
 """
-
+S3_PREFIX = "s3://"
 class FileValidator:
     
     def __init__(self, configs):
         self.configs = configs
         self.uploadType = configs.get(UPLOAD_TYPE)
         self.file_dir = configs.get(FILE_DIR)
+        self.from_s3 = False
         self.pre_manifest = configs.get(PRE_MANIFEST)
         self.fileList = [] #list of files object {file_name, file_path, file_size, invalid_reason}
         self.log = get_logger('File_Validator')
@@ -30,6 +32,10 @@ class FileValidator:
         self.has_file_id = None
         self.manifest_rows = None
         self.field_names = None
+        self.bucket_name = None
+        self.prefix = None
+        self.s3_bucket = None
+        self.download_file_dir = None
 
     def validate(self):
         # check file dir
@@ -55,7 +61,7 @@ class FileValidator:
         elif self.uploadType == TYPE_FILE: #file
             if not os.path.isfile(self.pre_manifest):
                 self.log.critical(f'manifest file is not valid!')
-                return False
+                return False  
             return self.validate_size_md5()
         
         else:
@@ -68,17 +74,31 @@ class FileValidator:
         self.files_info =  self.read_manifest()
         if not self.files_info or len(self.files_info ) == 0:
             return False
+        if self.file_dir.startswith(S3_PREFIX):
+            self.from_s3 = True
+            split_list = self.file_dir.replace(S3_PREFIX, "").split("/")
+            self.bucket_name = split_list[0]
+            self.prefix = "/".join(split_list[1:])
+            self.download_file_dir = "temp/download/" + get_uuid()
+            os.makedirs(os.path.dirname(self.download_file_dir), exist_ok=True)
+            self.s3_bucket = S3Bucket()
+            self.s3_bucket.set_s3_client(None, None)
         line_num = 2
         for info in self.files_info:
             invalid_reason = ""
-            file_path = os.path.join(self.file_dir, info[FILE_NAME_DEFAULT])
+            file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, info[FILE_NAME_DEFAULT])
+            if self.from_s3: #download file from s3
+                if not self.s3_bucket.download_object(self.s3_bucket, os.path.join(self.prefix, info[FILE_NAME_DEFAULT]), file_path): 
+                    invalid_reason += f"Failed to download {info[FILE_NAME_DEFAULT]} from {self.file_dir}!"
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.invalid_count += 1
+                    continue
             size = info.get(FILE_SIZE_DEFAULT)
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
             if not os.path.isfile(file_path):
                 invalid_reason += f"File {file_path} does not exist!"
-                #file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None, FILE_INVALID_REASON: None}
                 self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                 self.invalid_count += 1
                 continue
@@ -169,3 +189,6 @@ class FileValidator:
                 return False, msg
                 
         return True, None
+    
+    def download_file_from_S3(self, bucket, key):
+        pass
