@@ -6,8 +6,8 @@ import glob
 
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX  
-from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid, get_uuid
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3
+from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid, get_datetime_str
 from common.s3util import S3Bucket
 from bento.common.utils import get_logger, get_md5
 
@@ -17,14 +17,13 @@ For files: read manifest file and validate local files’ sizes and md5s
 For metadata: validate data folder contains TSV or TXT files
 Compose a list of files to be updated and their sizes (metadata or files)
 """
-S3_PREFIX = "s3://"
 class FileValidator:
     
     def __init__(self, configs):
         self.configs = configs
         self.uploadType = configs.get(UPLOAD_TYPE)
         self.file_dir = configs.get(FILE_DIR)
-        self.from_s3 = False
+        self.from_s3 = configs.get(FROM_S3)
         self.pre_manifest = configs.get(PRE_MANIFEST)
         self.fileList = [] #list of files object {file_name, file_path, file_size, invalid_reason}
         self.log = get_logger('File_Validator')
@@ -39,10 +38,9 @@ class FileValidator:
 
     def validate(self):
         # check file dir
-        if not os.path.isdir(self.file_dir):
+        if not self.from_s3 and not os.path.isdir(self.file_dir):
             self.log.critical(f'data file path is not valid!')
             return False
-        
         
         if self.uploadType == TYPE_MATE_DATA: #metadata
             txt_files = glob.glob('{}/*.txt'.format(self.file_dir ))
@@ -74,21 +72,20 @@ class FileValidator:
         self.files_info =  self.read_manifest()
         if not self.files_info or len(self.files_info ) == 0:
             return False
-        if self.file_dir.startswith(S3_PREFIX):
-            self.from_s3 = True
-            split_list = self.file_dir.replace(S3_PREFIX, "").split("/")
+        if self.from_s3:
+            split_list = self.file_dir.replace(S3_START, "").split("/")
             self.bucket_name = split_list[0]
             self.prefix = "/".join(split_list[1:])
-            self.download_file_dir = "temp/download/" + get_uuid()
+            self.download_file_dir =f"temp/download/{get_datetime_str()}/"
             os.makedirs(os.path.dirname(self.download_file_dir), exist_ok=True)
             self.s3_bucket = S3Bucket()
-            self.s3_bucket.set_s3_client(None, None)
+            self.s3_bucket.set_s3_client(self.bucket_name, None)
         line_num = 2
         for info in self.files_info:
             invalid_reason = ""
             file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, info[FILE_NAME_DEFAULT])
             if self.from_s3: #download file from s3
-                if not self.s3_bucket.download_object(self.s3_bucket, os.path.join(self.prefix, info[FILE_NAME_DEFAULT]), file_path): 
+                if not self.s3_bucket.download_object(os.path.join(self.prefix, info[FILE_NAME_DEFAULT]), file_path): 
                     invalid_reason += f"Failed to download {info[FILE_NAME_DEFAULT]} from {self.file_dir}!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1

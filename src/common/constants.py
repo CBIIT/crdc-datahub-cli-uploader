@@ -49,4 +49,7 @@ ACCESS_KEY_ID = "accessKeyId"
 SECRET_KEY = "secretAccessKey"
 SESSION_TOKEN = "sessionToken"
 
+S3_START= "s3://"
+FROM_S3 = "from_s3"
+
 
