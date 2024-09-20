@@ -15,7 +15,7 @@ class S3Bucket:
     def set_s3_client(self, bucket, credentials):
         self.bucket_name = bucket
         
-        if credentials and bucket:
+        if credentials:
             self.credential = credentials
             session = boto3.session.Session(
                 aws_access_key_id=credentials[ACCESS_KEY_ID],
@@ -28,6 +28,8 @@ class S3Bucket:
             
         else:
             self.client = boto3.client('s3')
+            self.s3 = boto3.resource('s3')
+            self.bucket = self.s3.Bucket(bucket)
             self.credential = None
         
        
@@ -52,9 +54,9 @@ class S3Bucket:
     def same_size_file_exists(self, key, file_size):
         return file_size == self.get_object_size(key)
     
-    def download_object(self, bucket_name, key, local_file_path):
+    def download_object(self, key, local_file_path):
         try:
-            self.client.download_file(bucket_name, key, local_file_path)
+            self.bucket.download_file( key, local_file_path)
             return True
         except ClientError as ce:
             self.log.error(ce)

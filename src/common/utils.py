@@ -2,6 +2,7 @@
 import sys
 import csv
 from uuid import UUID
+from datetime import datetime
 
 """ 
 clean_up_key_value(dict)
@@ -82,5 +83,9 @@ def is_valid_uuid(uuid_to_test, version=5):
 def get_uuid(version=4):
     uuid = UUID(int=version)
     return str(uuid)
+
+def get_datetime_str():
+    from datetime import datetime
+    return datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
 
