@@ -72,7 +72,7 @@ class FileValidator:
         self.files_info =  self.read_manifest()
         if not self.files_info or len(self.files_info ) == 0:
             return False
-        if self.from_s3:
+        if self.from_s3 == True:
             split_list = self.file_dir.replace(S3_START, "").split("/")
             self.bucket_name = split_list[0]
             self.prefix = "/".join(split_list[1:])
@@ -84,12 +84,14 @@ class FileValidator:
         for info in self.files_info:
             invalid_reason = ""
             file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, info[FILE_NAME_DEFAULT])
-            if self.from_s3: #download file from s3
+            if self.from_s3 == True: #download file from s3
                 if not self.s3_bucket.download_object(os.path.join(self.prefix, info[FILE_NAME_DEFAULT]), file_path): 
                     invalid_reason += f"Failed to download {info[FILE_NAME_DEFAULT]} from {self.file_dir}!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
                     continue
+                else:
+                    self.log.info(f"Download {info[FILE_NAME_DEFAULT]} from {self.file_dir} successfully!")
             size = info.get(FILE_SIZE_DEFAULT)
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
