@@ -188,6 +188,3 @@ class FileValidator:
                 return False, msg
                 
         return True, None
-    
-    def download_file_from_S3(self, bucket, key):
-        pass
