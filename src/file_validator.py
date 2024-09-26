@@ -6,9 +6,8 @@ import glob
 
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3
-from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid, get_datetime_str, extract_s3_info_from_url
-from common.s3util import S3Bucket
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR
+from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger, get_md5
 
 
@@ -31,9 +30,6 @@ class FileValidator:
         self.has_file_id = None
         self.manifest_rows = None
         self.field_names = None
-        self.bucket_name = None
-        self.prefix = None
-        self.s3_bucket = None
         self.download_file_dir = None
 
     def validate(self):
@@ -73,7 +69,7 @@ class FileValidator:
         if not self.files_info or len(self.files_info ) == 0:
             return False
         if self.from_s3 == True:
-            self.bucket_name, self.prefix, self.download_file_dir = extract_s3_info_from_url(self.file_dir)
+            self.download_file_dir = TEMP_DOWNLOAD_DIR
         line_num = 2
         for info in self.files_info:
             invalid_reason = ""
@@ -153,7 +149,10 @@ class FileValidator:
             self.log.debug(e)
             self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
         return files_info
-    
+    """
+    validate file id format
+    return: True or False, error message
+    """
     def validate_file_id(self, id, line_num):
         id_field_name = self.configs.get(FILE_ID_FIELD)
         if id:
