@@ -92,7 +92,6 @@ def extract_s3_info_from_url(url):
     split_list = url.replace(S3_START, "").split("/")
     bucket_name = split_list[0]
     prefix = "/".join(split_list[1:])
-    download_file_dir =f"temp/download/"
-    return bucket_name, prefix, download_file_dir
+    return bucket_name, prefix
 
 

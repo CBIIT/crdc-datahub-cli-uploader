@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 import os
 from collections import deque
-
 from bento.common.utils import get_logger, get_md5
-from bento.common.s3 import upload_log_file
 from common.constants import FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  OVERWRITE, DRY_RUN,\
-    PRE_MANIFEST, S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH, S3_START, FILE_SIZE_DEFAULT, MD5_DEFAULT
+    PRE_MANIFEST, S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH,FILE_SIZE_DEFAULT, MD5_DEFAULT, TEMP_DOWNLOAD_DIR
 from common.utils import extract_s3_info_from_url
 from common.s3util import S3Bucket
 from copier import Copier
@@ -42,9 +40,12 @@ class FileUploader:
         # Statistics
         self.files_processed = 0
         self.files_failed = 0
-        self.set_from_s3()
+        self._set_from_s3()
 
-    def set_from_s3(self):
+    """
+    Set s3 bucket, prefix and file dir for downloading if source file dir is from s3.
+    """
+    def _set_from_s3(self):
         if not self.from_s3: 
             self.from_bucket_name = None
             self.from_prefix = None
@@ -53,11 +54,15 @@ class FileUploader:
             self.download_file_dir = None
         else:
             self.file_dir = self.configs.get(FILE_DIR)
-            self.from_bucket_name, self.from_prefix, self.download_file_dir = extract_s3_info_from_url(self.file_dir)
+            self.from_bucket_name, self.from_prefix = extract_s3_info_from_url(self.file_dir)
+            self.download_file_dir = TEMP_DOWNLOAD_DIR
             os.makedirs(os.path.dirname(self.download_file_dir), exist_ok=True)
             self.s3_bucket = S3Bucket()
             self.s3_bucket.set_s3_client(self.bucket_name, None)
-
+    """
+    Prepare file information for uploading
+    :return: list of file information
+    """
     def _prepare_files(self):
         files = []
         for info in self.file_info_list:
@@ -72,7 +77,7 @@ class FileUploader:
     # Use this method in solo mode
     def upload(self):
         """
-          Read file information from pre-manifest and copy them all to destination bucket
+          Read file information from pre-manifest and copy them one by one to destination bucket
           :return:
         """
         self.copier = Copier(self.bucket_name, self.prefix, self.configs)
@@ -82,9 +87,8 @@ class FileUploader:
             file_info = job[self.INFO]
             file_path = file_info[FILE_PATH]
             if self.from_s3 == True: #download file from s3
-                invalid_reason = ''
                 if not self.s3_bucket.download_object(os.path.join(self.prefix, file_info[FILE_NAME_DEFAULT]), file_path): 
-                    invalid_reason += f"Failed to download {file_info[FILE_NAME_DEFAULT]} from {self.file_dir}!"
+                    invalid_reason = f"Failed to download {file_info[FILE_NAME_DEFAULT]} from {self.file_dir}!"
                     file_info[SUCCEEDED] = False
                     file_info[ERRORS] = [invalid_reason]
                     self.invalid_count += 1
@@ -96,7 +100,7 @@ class FileUploader:
                         os.remove(file_path)
                         self.invalid_count += 1
                         continue
-            if self.invalid_count > 0: #skip uploading but need to validate all downloaded data file.                
+            if self.invalid_count > 0: #skip uploading but need to validate downloaded data file one by one.                
                 continue
             else: 
                 job[self.TTL] -= 1
@@ -125,6 +129,12 @@ class FileUploader:
 
         return self.copier.files_copied > 0 or self.copier.files_exist_at_dest == self.files_processed
 
+    """
+    Handle failed file uploading
+    :param job: current job
+    :param queue: job queue
+    :return: None
+    """
     def _deal_with_failed_file(self, job, queue):
         if job[self.TTL]  > 0:
             self.log.error(f'File: {job[self.INFO].get(FILE_NAME_DEFAULT) } - Uploading file FAILED! Retry left: {job[self.TTL]}')
@@ -137,31 +147,36 @@ class FileUploader:
             if self.from_s3 == True:
                 os.remove(file_info[FILE_PATH])
     
+    """
+    Validate downloaded file size and md5
+    :param file_info: file info dict
+    :param file_path: downloaded file path
+    :return: True if valid, False otherwise
+    """
     def _validate_downloaded_file(self, file_info, file_path):
-        invalid_reason = ''
         if not os.path.isfile(file_path):
-            invalid_reason += f"File {file_path} does not exist!"
+            invalid_reason = f"File {file_path} does not exist!"
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
             return False
 
         file_size = os.path.getsize(file_path)
         if file_size != file_info[FILE_SIZE_DEFAULT]:
-            invalid_reason += f"Real file size {file_size} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {file_info[FILE_SIZE_DEFAULT]}!"
+            invalid_reason = f"Real file size {file_size} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {file_info[FILE_SIZE_DEFAULT]}!"
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
             return False
 
         md5_info = file_info[MD5_DEFAULT] 
         if not md5_info:
-            invalid_reason += f"MD5 of {file_info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
+            invalid_reason = f"MD5 of {file_info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
             return False
         #calculate file md5
         md5sum = get_md5(file_path)
         if md5_info != md5sum:
-            invalid_reason += f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
+            invalid_reason = f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
             return False
