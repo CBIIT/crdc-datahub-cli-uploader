@@ -3,6 +3,7 @@ import sys
 import csv
 from uuid import UUID
 from datetime import datetime
+from common.constants import S3_START
 
 """ 
 clean_up_key_value(dict)
@@ -85,7 +86,13 @@ def get_uuid(version=4):
     return str(uuid)
 
 def get_datetime_str():
-    from datetime import datetime
     return datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+
+def extract_s3_info_from_url(url):
+    split_list = url.replace(S3_START, "").split("/")
+    bucket_name = split_list[0]
+    prefix = "/".join(split_list[1:])
+    download_file_dir =f"temp/download/"
+    return bucket_name, prefix, download_file_dir
 
 
