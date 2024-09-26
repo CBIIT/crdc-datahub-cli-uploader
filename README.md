@@ -69,7 +69,8 @@ Put all data files to be uploaded in the same folder.
 
 ### Prepare manifest
 
-A manifest is a special metadata (TSV) file that contains information about data files to be uploaded. CLI tool will use the information in a manifest to find, validate and upload data files to Data Hub. There are 3 columns that are important to CLI tool:
+A manifest is a special metadata (TSV) file that contains information about data files to be uploaded. CLI tool will use the information in a manifest to find, validate and upload data files to Data Hub. There are 4 columns that are important to CLI tool:
+- Column contains file IDs
 - Column contains file names
 - Column contains file sizes
 - Column contains file MD5 checksums
@@ -88,6 +89,8 @@ You can put a manifest in the same folder with the data files, or you can put it
 - type: must be set to “data file”
 - data: local path to the folder that contains the data files to be uploaded
 - manifest: local path to the manifest file
+- id-field: column name in the manifest file that contains file IDs(Keys). Please refer to the data model regarding which property is the ID/Key property.
+- omit-DCF-prefix: for most data commons, this should be set to “false”. One exception is ICDC, which should be set to “true”.
 - name-field: column name in the manifest file that contains data file names
 - size-field: column name in the manifest file that contains data file sizes
 - md5-field: column name in the manifest file that contains data file MD5 checksums
@@ -96,6 +99,13 @@ You can put a manifest in the same folder with the data files, or you can put it
 - retries: number of retries the CLI tool will perform after a failed upload 
 - overwrite: if set to “true”, CLI will upload a data file to overwrite the data file with same name that already exists in the Data Hub target storage. If set to “false”, CLI will not upload a data file if a data file with the same name exists in the Data Hub target storage.
 - dryrun: if set to “true”, CLI will not upload any data files to the Data Hub target storage. If set to “false”, CLI will upload data files to the Data Hub target storage.
+
+### File ID generation
+File.tsv template downloaded from Data Model viewer doesn’t contain file Keys/IDs column, because the system will generate it for you. The generated final manifest will be saved in the same place the file manifest is and has a “-final” suffix . For example, file-final.tsv. 
+Uploader CLI Tool will upload this final manifest for you once all data files have been successfully uploaded. So that you don’t have to upload file manifest in the CRDC submission portal.
+
+However, if you need to update the content of the file manifest, please make sure to edit the final manifest and upload it in the CRDC submission portal. 
+You can also use the final manifest in the Uploader CLI Tool, if you want to upload the data files again for any reason. In that case, the Uploader CLI Tool will use the file IDs/Keys provided in the file manifest instead of generating new ones.
 
 ### Execute upload command
 
