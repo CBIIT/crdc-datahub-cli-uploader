@@ -36,14 +36,12 @@ class FileUploader:
         self.log = get_logger('File_Uploader')
         self.from_s3 = configs.get(FROM_S3)
         self.invalid_count = 0
-
         # Statistics
         self.files_processed = 0
         self.files_failed = 0
-        self._set_from_s3()
 
     """
-    Set s3 bucket, prefix and file dir for downloading if source file dir is from s3.
+    Set s3 bucket, prefix and file dir for downloading if source file dir is s3 url.
     """
     def _set_from_s3(self):
         if not self.from_s3: 
@@ -77,54 +75,59 @@ class FileUploader:
           Read file information from pre-manifest and copy them one by one to destination bucket
           :return:
         """
+        self._set_from_s3() #reset from s3 bucket, prefix
         self.copier = Copier(self.bucket_name, self.prefix, self.configs)
         file_queue = deque(self._prepare_files())
-        while file_queue:
-            job = file_queue.popleft()
-            file_info = job[self.INFO]
-            file_path = file_info[FILE_PATH]
-            if self.from_s3 == True: #download file from s3
-                if not self.s3_bucket.download_object(os.path.join(self.from_prefix, file_info[FILE_NAME_DEFAULT]), file_path): 
-                    invalid_reason = f"Failed to download {file_info[FILE_NAME_DEFAULT]} from {self.file_dir}!"
-                    file_info[SUCCEEDED] = False
-                    file_info[ERRORS] = [invalid_reason]
-                    self.invalid_count += 1
-                    continue
-                else:
-                    self.log.info(f"Download {file_info[FILE_NAME_DEFAULT]} from {self.file_dir} successfully!")
-                    # validate size and md5 of downloaded data file
-                    if not self._validate_downloaded_file(file_info, file_path):
-                        os.remove(file_path)
+        try:
+            while file_queue:
+                job = file_queue.popleft()
+                file_info = job[self.INFO]
+                file_path = file_info[FILE_PATH]
+                if self.from_s3 == True: #download file from s3
+                    if not self.s3_bucket.download_object(os.path.join(self.from_prefix, file_info[FILE_NAME_DEFAULT]), file_path): 
+                        invalid_reason = f"Failed to download {file_info[FILE_NAME_DEFAULT]} from {self.file_dir}!"
+                        file_info[SUCCEEDED] = False
+                        file_info[ERRORS] = [invalid_reason]
                         self.invalid_count += 1
                         continue
-            if self.invalid_count > 0: #skip uploading but need to validate downloaded data file one by one.                
-                continue
-            else: 
-                job[self.TTL] -= 1
-                self.files_processed += 1
-                result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
-                if result.get(Copier.STATUS):
-                    file_info[SUCCEEDED] = True
-                    file_info[ERRORS] = None
-                    if self.from_s3 == True:
-                        os.remove(file_path)
-                else:
-                    self._deal_with_failed_file(job, file_queue)
+                    else:
+                        self.log.info(f"Download {file_info[FILE_NAME_DEFAULT]} from {self.file_dir} successfully!")
+                        # validate size and md5 of downloaded data file
+                        if not self._validate_downloaded_file(file_info, file_path):
+                            os.remove(file_path)
+                            self.invalid_count += 1
+                            continue
+                if self.invalid_count > 0: #skip uploading but need to validate downloaded data file one by one.                
+                    continue
+                else: 
+                    job[self.TTL] -= 1
+                    self.files_processed += 1
+                    result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
+                    if result.get(Copier.STATUS):
+                        file_info[SUCCEEDED] = True
+                        file_info[ERRORS] = None
+                        if self.from_s3 == True:
+                            os.remove(file_path)
+                    else:
+                        self._deal_with_failed_file(job, file_queue)
 
-        if self.invalid_count > 0:
-            self.log.info(f"{self.invalid_count} files are invalid and uploading skipped!")
-            return False
-        
-        self.log.info(f'Files processed: {self.files_processed}')
-        self.log.info(f'Files not found: {len(self.copier.files_not_found)}')
-        self.log.info(f'Files copied: {self.copier.files_copied}')
-        self.log.info(f'Files exist at destination: {self.copier.files_exist_at_dest}')
-        self.log.info(f'Files failed: {self.files_failed}')
+            if self.invalid_count > 0:
+                self.log.info(f"{self.invalid_count} files are invalid and uploading skipped!")
+                return False
+            
+            self.log.info(f'Files processed: {self.files_processed}')
+            self.log.info(f'Files not found: {len(self.copier.files_not_found)}')
+            self.log.info(f'Files copied: {self.copier.files_copied}')
+            self.log.info(f'Files exist at destination: {self.copier.files_exist_at_dest}')
+            self.log.info(f'Files failed: {self.files_failed}')
 
-        if self.copier.files_exist_at_dest == self.files_processed:
-            self.log.info(f"All files already exist in the cloud storage")
+            if self.copier.files_exist_at_dest == self.files_processed:
+                self.log.info(f"All files already exist in the cloud storage")
 
-        return self.copier.files_copied > 0 or self.copier.files_exist_at_dest == self.files_processed
+            return self.copier.files_copied > 0 or self.copier.files_exist_at_dest == self.files_processed
+        finally:
+            self.s3_bucket = None
+            self.copier = None
 
     """
     Handle failed file uploading
