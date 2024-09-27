@@ -68,6 +68,7 @@ class FileValidator:
             return False
         if self.from_s3 == True:
             self.download_file_dir = TEMP_DOWNLOAD_DIR
+            os.makedirs(os.path.dirname(self.download_file_dir), exist_ok=True)
         line_num = 2
         for info in self.files_info:
             invalid_reason = ""

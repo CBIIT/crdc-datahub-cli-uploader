@@ -51,12 +51,9 @@ class FileUploader:
             self.from_prefix = None
             self.s3_bucket = None
             self.file_dir = None
-            self.download_file_dir = None
         else:
             self.file_dir = self.configs.get(FILE_DIR)
             self.from_bucket_name, self.from_prefix = extract_s3_info_from_url(self.file_dir)
-            self.download_file_dir = TEMP_DOWNLOAD_DIR
-            os.makedirs(os.path.dirname(self.download_file_dir), exist_ok=True)
             self.s3_bucket = S3Bucket()
             self.s3_bucket.set_s3_client(self.bucket_name, None)
     """
