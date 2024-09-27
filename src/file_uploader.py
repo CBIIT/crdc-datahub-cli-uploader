@@ -55,7 +55,7 @@ class FileUploader:
             self.file_dir = self.configs.get(FILE_DIR)
             self.from_bucket_name, self.from_prefix = extract_s3_info_from_url(self.file_dir)
             self.s3_bucket = S3Bucket()
-            self.s3_bucket.set_s3_client(self.bucket_name, None)
+            self.s3_bucket.set_s3_client(self.from_bucket_name, None)
     """
     Prepare file information for uploading
     :return: list of file information
@@ -84,7 +84,7 @@ class FileUploader:
             file_info = job[self.INFO]
             file_path = file_info[FILE_PATH]
             if self.from_s3 == True: #download file from s3
-                if not self.s3_bucket.download_object(os.path.join(self.prefix, file_info[FILE_NAME_DEFAULT]), file_path): 
+                if not self.s3_bucket.download_object(os.path.join(self.from_prefix, file_info[FILE_NAME_DEFAULT]), file_path): 
                     invalid_reason = f"Failed to download {file_info[FILE_NAME_DEFAULT]} from {self.file_dir}!"
                     file_info[SUCCEEDED] = False
                     file_info[ERRORS] = [invalid_reason]
