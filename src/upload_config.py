@@ -4,7 +4,7 @@ import yaml
 import sys
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, RETRIES, OVERWRITE, \
-    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX
+    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3
 from bento.common.utils import get_logger
 from common.utils import clean_up_key_value
 
@@ -144,9 +144,13 @@ class Config():
             return False
         else:
             self.data[FILE_DIR]  = filepath
-            if not os.path.isdir(filepath): 
-                self.log.critical(f'Configuration error in “data” (path to data files): “{filepath}” is not valid')
-                return False
+            if not filepath.startswith(S3_START):
+                self.data[FROM_S3] = False
+                if not os.path.isdir(filepath): 
+                    self.log.critical(f'Configuration error in “data” (path to data files): “{filepath}” is not valid')
+                    return False
+            else:
+                self.data[FROM_S3] = True
   
         return True
 
