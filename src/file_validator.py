@@ -7,6 +7,8 @@ from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_D
     FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger, get_md5
+from common.utils import extract_s3_info_from_url
+from common.s3util import S3Bucket
 
 
 """ Requirement for the ticket crdcdh-343
@@ -29,6 +31,9 @@ class FileValidator:
         self.manifest_rows = None
         self.field_names = None
         self.download_file_dir = None
+        self.from_bucket_name = None
+        self.from_prefix = None
+        self.s3_bucket = None
 
     def validate(self):
         # check file dir
@@ -53,8 +58,15 @@ class FileValidator:
         elif self.uploadType == TYPE_FILE: #file
             if not os.path.isfile(self.pre_manifest):
                 self.log.critical(f'manifest file is not valid!')
-                return False  
-            return self.validate_size_md5()
+                return False 
+            try: 
+                return self.validate_size_md5()
+            except Exception as e:
+                self.log.critical(e)
+                return False
+            finally:
+                if self.s3_bucket:
+                    self.s3_bucket.close()
         
         else:
             self.log.critical(f'Invalid uploading type, {self.uploadType}!')
@@ -69,6 +81,9 @@ class FileValidator:
         if self.from_s3 == True:
             self.download_file_dir = TEMP_DOWNLOAD_DIR
             os.makedirs(self.download_file_dir, exist_ok=True)
+            self.from_bucket_name, self.from_prefix = extract_s3_info_from_url(self.file_dir)
+            self.s3_bucket = S3Bucket()
+            self.s3_bucket.set_s3_client(self.from_bucket_name, None)
         line_num = 2
         for info in self.files_info:
             invalid_reason = ""
@@ -104,7 +119,18 @@ class FileValidator:
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
                     continue
-            else: # escape validate here, instead validate right after download from s3 and before upload in file_upload.py
+            else: # check file existing and validate file size in s3 bucket
+                s3_file_size = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
+                if not s3_file_size:
+                    invalid_reason += f"File {info[FILE_NAME_DEFAULT]} does not exist in {self.file_dir}!"
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.invalid_count += 1
+                    continue
+                if s3_file_size != size_info:
+                    invalid_reason += f"Real file size {s3_file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {size_info}!"
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.invalid_count += 1
+                    continue
                 file_size = size_info
                 md5sum = info[MD5_DEFAULT]
             # validate file id
