@@ -97,20 +97,21 @@ class FileValidator:
                     invalid_reason += f"File {file_path} does not exist!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
-                
                 file_size = os.path.getsize(file_path)
                 if file_size != size_info:
                     invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {info[FILE_SIZE_DEFAULT]}!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: invalid_reason})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
-
                 md5_info = info[MD5_DEFAULT] 
                 if not md5_info:
                     invalid_reason += f"MD5 of {info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
                 #calculate file md5
                 md5sum = get_md5(file_path)
@@ -118,6 +119,7 @@ class FileValidator:
                     invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
             else: # check file existing and validate file size in s3 bucket
                 s3_file_size = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
@@ -125,11 +127,13 @@ class FileValidator:
                     invalid_reason += f"File {info[FILE_NAME_DEFAULT]} does not exist in {self.file_dir}!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
                 if s3_file_size != size_info:
                     invalid_reason += f"Real file size {s3_file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {size_info}!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
                 file_size = size_info
                 md5sum = info[MD5_DEFAULT]
@@ -139,9 +143,10 @@ class FileValidator:
                 invalid_reason += msg
                 self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
                 self.invalid_count += 1
+                self.log.error(invalid_reason)
                 continue
 
-            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None})
+            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: True, ERRORS: None})
             line_num += 1
         return True
     
