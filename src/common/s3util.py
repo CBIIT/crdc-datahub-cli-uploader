@@ -47,7 +47,6 @@ class S3Bucket:
         try:
             res = self.client.head_object(Bucket=self.bucket_name, Key=key)
             return res['ContentLength']
-
         except ClientError as e:
             return None
 
@@ -64,5 +63,11 @@ class S3Bucket:
         except Exception as e:
             self.log.error(e)
             return False
+        
+    def close(self):
+        self.client.close()
+        self.client = None
+        self.bucket = None
+        self.s3 = None
         
 
