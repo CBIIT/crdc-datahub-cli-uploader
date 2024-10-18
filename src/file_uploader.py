@@ -156,7 +156,6 @@ class FileUploader:
     def _validate_downloaded_file(self, file_info, file_path):
         if not os.path.isfile(file_path):
             invalid_reason = f"File {file_path} does not exist!"
-            file_info[MD5_DEFAULT] = None
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
             self.log.error(invalid_reason)
@@ -165,7 +164,6 @@ class FileUploader:
         file_size = os.path.getsize(file_path)
         if file_size != file_info[FILE_SIZE_DEFAULT]:
             invalid_reason = f"Real file size {file_size} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {file_info[FILE_SIZE_DEFAULT]}!"
-            file_info[MD5_DEFAULT] = None
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
             self.log.error(invalid_reason)
