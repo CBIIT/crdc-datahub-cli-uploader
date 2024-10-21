@@ -7,6 +7,8 @@ from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_D
     FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger, get_md5
+from common.utils import extract_s3_info_from_url
+from common.s3util import S3Bucket
 
 
 """ Requirement for the ticket crdcdh-343
@@ -29,6 +31,9 @@ class FileValidator:
         self.manifest_rows = None
         self.field_names = None
         self.download_file_dir = None
+        self.from_bucket_name = None
+        self.from_prefix = None
+        self.s3_bucket = None
 
     def validate(self):
         # check file dir
@@ -53,8 +58,15 @@ class FileValidator:
         elif self.uploadType == TYPE_FILE: #file
             if not os.path.isfile(self.pre_manifest):
                 self.log.critical(f'manifest file is not valid!')
-                return False  
-            return self.validate_size_md5()
+                return False 
+            try: 
+                return self.validate_size_md5()
+            except Exception as e:
+                self.log.critical(e)
+                return False
+            finally:
+                if self.s3_bucket:
+                    self.s3_bucket.close()
         
         else:
             self.log.critical(f'Invalid uploading type, {self.uploadType}!')
@@ -69,6 +81,9 @@ class FileValidator:
         if self.from_s3 == True:
             self.download_file_dir = TEMP_DOWNLOAD_DIR
             os.makedirs(self.download_file_dir, exist_ok=True)
+            self.from_bucket_name, self.from_prefix = extract_s3_info_from_url(self.file_dir)
+            self.s3_bucket = S3Bucket()
+            self.s3_bucket.set_s3_client(self.from_bucket_name, None)
         line_num = 2
         for info in self.files_info:
             invalid_reason = ""
@@ -80,22 +95,23 @@ class FileValidator:
             if not self.from_s3: # only validate local data file
                 if not os.path.isfile(file_path):
                     invalid_reason += f"File {file_path} does not exist!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
-                
                 file_size = os.path.getsize(file_path)
                 if file_size != size_info:
                     invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {info[FILE_SIZE_DEFAULT]}!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: invalid_reason})
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: invalid_reason})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
-
                 md5_info = info[MD5_DEFAULT] 
                 if not md5_info:
                     invalid_reason += f"MD5 of {info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
                 #calculate file md5
                 md5sum = get_md5(file_path)
@@ -103,8 +119,22 @@ class FileValidator:
                     invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
+                    self.log.error(invalid_reason)
                     continue
-            else: # escape validate here, instead validate right after download from s3 and before upload in file_upload.py
+            else: # check file existing and validate file size in s3 bucket
+                s3_file_size = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
+                if not s3_file_size:
+                    invalid_reason += f"File {info[FILE_NAME_DEFAULT]} does not exist in {self.file_dir}!"
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.invalid_count += 1
+                    self.log.error(invalid_reason)
+                    continue
+                if s3_file_size != size_info:
+                    invalid_reason += f"Real file size {s3_file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {size_info}!"
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.invalid_count += 1
+                    self.log.error(invalid_reason)
+                    continue
                 file_size = size_info
                 md5sum = info[MD5_DEFAULT]
             # validate file id
@@ -113,9 +143,10 @@ class FileValidator:
                 invalid_reason += msg
                 self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
                 self.invalid_count += 1
+                self.log.error(invalid_reason)
                 continue
 
-            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None})
+            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: True, ERRORS: None})
             line_num += 1
         return True
     

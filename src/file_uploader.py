@@ -158,6 +158,7 @@ class FileUploader:
             invalid_reason = f"File {file_path} does not exist!"
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
+            self.log.error(invalid_reason)
             return False
 
         file_size = os.path.getsize(file_path)
@@ -165,6 +166,7 @@ class FileUploader:
             invalid_reason = f"Real file size {file_size} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {file_info[FILE_SIZE_DEFAULT]}!"
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
+            self.log.error(invalid_reason)
             return False
 
         md5_info = file_info[MD5_DEFAULT] 
@@ -172,6 +174,7 @@ class FileUploader:
             invalid_reason = f"MD5 of {file_info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
+            self.log.error(invalid_reason)
             return False
         #calculate file md5
         md5sum = get_md5(file_path)
@@ -179,6 +182,7 @@ class FileUploader:
             invalid_reason = f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
+            self.log.error(invalid_reason)
             return False
         return True
        
