@@ -25,12 +25,16 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller  # Install pyinstaller
 
-      - name: Build Windows binary
+      - name: Build Windows binary & add configuration files and README.md
         run: |
           pyinstaller --onefile --distpath dist/windows --name uploader.exe src/uploader.py
+          cp -R configs dist/windows
+          cp README.md dist/windows
 
       - name: Compress Windows binary
-        run: zip -j crdc-datahub-cli-uploader-windows.zip dist/windows/uploader.exe
+        run: |
+          cd dist/windows
+          zip -r ../../crdc-datahub-cli-uploader-windows.zip .
 
       - name: Upload Windows binary to release
         uses: actions/upload-release-asset@v1
@@ -67,20 +71,30 @@ jobs:
         run: zip -r crdc-datahub-cli-uploader.zip .
 
 
-      - name: Build macOS Intel binary
+      - name: Build macOS Intel binary & add configuration files and README.md
         run: |
           pyinstaller --onefile --paths=src/bento --distpath dist/mac-x64 --name uploader src/uploader.py
+          cp -R configs dist/mac-x64
+          cp README.md dist/mac-x64
 
-      - name: Build macOS Apple Silicon binary
+      - name: Build macOS Apple Silicon binary & add configuration files and README.md
         env:
           ARCHFLAGS: "-arch arm64"  # Ensures build for Apple Silicon
         run: |
           pyinstaller --onefile --paths=src/bento --distpath dist/mac-arm --name uploader src/uploader.py
+          cp -R configs dist/mac-arm
+          cp README.md dist/mac-arm
 
-      - name: Compress Binary Files
+      - name: Compress Binary macOS Intel Files
         run: |
-          zip -j crdc-datahub-cli-uploader-mac-arm.zip dist/mac-arm/uploader
-          zip -j crdc-datahub-cli-uploader-mac-x64.zip dist/mac-x64/uploader
+          cd dist/mac-x64
+          zip -r ../../crdc-datahub-cli-uploader-mac-x64.zip .
+        shell: bash
+
+      - name: Compress Binary Apple Silicon Files
+        run: |
+          cd dist/mac-arm
+          zip -r ../../crdc-datahub-cli-uploader-mac-arm.zip .
         shell: bash
 
       - name: Upload macOS Intel binary to release
