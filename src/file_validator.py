@@ -5,8 +5,9 @@ import os
 import glob
 
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
-     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS
-from common.utils import clean_up_key_value, clean_up_strs, get_exception_msg
+    FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
+    FILE_ID_FIELD, OMIT_DCF_PREFIX  
+from common.utils import clean_up_key_value, clean_up_strs, get_exception_msg, is_valid_uuid
 from bento.common.utils import get_logger, get_md5
 
 
@@ -26,6 +27,9 @@ class FileValidator:
         self.fileList = [] #list of files object {file_name, file_path, file_size, invalid_reason}
         self.log = get_logger('File_Validator')
         self.invalid_count = 0
+        self.has_file_id = None
+        self.manifest_rows = None
+        self.field_names = None
 
     def validate(self):
         # check file dir
@@ -64,65 +68,104 @@ class FileValidator:
         self.files_info =  self.read_manifest()
         if not self.files_info or len(self.files_info ) == 0:
             return False
-        
+        line_num = 2
         for info in self.files_info:
             invalid_reason = ""
             file_path = os.path.join(self.file_dir, info[FILE_NAME_DEFAULT])
             size = info.get(FILE_SIZE_DEFAULT)
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
-
+            file_id = info.get(FILE_ID_DEFAULT)
             if not os.path.isfile(file_path):
                 invalid_reason += f"File {file_path} does not exist!"
                 #file dictionary: {FILE_NAME_DEFAULT: None, FILE_SIZE_DEFAULT: None, FILE_INVALID_REASON: None}
-                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                 self.invalid_count += 1
                 continue
             
             file_size = os.path.getsize(file_path)
             if file_size != size_info:
                 invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {info[FILE_SIZE_DEFAULT]}!"
-                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: invalid_reason})
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: invalid_reason})
                 self.invalid_count += 1
                 continue
 
             md5_info = info[MD5_DEFAULT] 
             if not md5_info:
                 invalid_reason += f"MD5 of {info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
-                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: None, SUCCEEDED: False, ERRORS: [invalid_reason]})
                 self.invalid_count += 1
                 continue
             #calculate file md5
             md5sum = get_md5(file_path)
             if md5_info != md5sum:
                 invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
-                self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
                 self.invalid_count += 1
                 continue
+            # validate file id
+            result, msg = self.validate_file_id(file_id, line_num)
+            if not result:
+                invalid_reason += msg
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.invalid_count += 1
 
-            self.fileList.append({FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None})
-
+            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None})
+            line_num += 1
         return True
     
     #public function to read pre-manifest and return list of file records 
     def read_manifest(self):
         files_info = []
         files_dict = {}
+        manifest_rows = []
         try:
             with open(self.pre_manifest) as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
-                self.field_names = clean_up_strs(reader.fieldnames)
+                if not self.field_names:
+                    self.field_names = clean_up_strs(reader.fieldnames)
                 for info in reader:
                     file_info = clean_up_key_value(info)
+                    manifest_rows.append(file_info)
                     file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
+                    file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
+                    if self.has_file_id is None:
+                        self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
                     files_dict.update({file_name: {
+                        FILE_ID_DEFAULT: file_id,
                         FILE_NAME_DEFAULT: file_name,
                         FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
                         MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
                     }})
             files_info  =  list(files_dict.values())
+            self.manifest_rows = manifest_rows
         except Exception as e:
             self.log.debug(e)
             self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
         return files_info
-
+    
+    def validate_file_id(self, id, line_num):
+        id_field_name = self.configs.get(FILE_ID_FIELD)
+        if id:
+            if self.configs[OMIT_DCF_PREFIX] == False:
+                msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like "dg.4DFC/e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
+                if not id.startswith("dg.4DFC/"):
+                    self.log.error(msg)
+                    return False, msg
+                else:
+                    uuid = id.split('/')[1]
+                    if not is_valid_uuid(uuid):
+                        self.log.error(msg)
+                        return False, msg  
+            else:
+                if(not is_valid_uuid(id)):
+                    msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like "e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
+                    self.log.error(msg)
+                    return False, msg 
+        else:
+            if self.has_file_id:
+                msg = f'Line {line_num}: "{id_field_name}" is required but not provided. You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
+                self.log.error(msg)
+                return False, msg
+                
+        return True, None

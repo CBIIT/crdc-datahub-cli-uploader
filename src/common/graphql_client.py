@@ -3,7 +3,7 @@
 import requests
 import json
 from bento.common.utils import get_logger
-from common.constants import UPLOAD_TYPE, API_URL, SUBMISSION_ID, INTENTION, TOKEN
+from common.constants import UPLOAD_TYPE, API_URL, SUBMISSION_ID, TOKEN
 from common.utils import get_exception_msg
 
 class APIInvoker:
@@ -12,7 +12,6 @@ class APIInvoker:
         self.headers = {'Authorization': f'Bearer {self.token}'}
         self.url = configs.get(API_URL)
         self.submissionId = configs.get(SUBMISSION_ID)
-        self.intention = configs.get(INTENTION)
         self.log = get_logger('GraphQL API')
         self.type = configs.get(UPLOAD_TYPE)
 
@@ -55,13 +54,11 @@ class APIInvoker:
         self.new_batch = None
         #adjust file list to match the graphql param.
         file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
-        intention = "null" if not self.intention else "\"" + self.intention + "\"" 
         body = f"""
         mutation {{
             createBatch (
                 submissionID: \"{self.submissionId}\", 
                 type: \"{self.type}\", 
-                metadataIntention: {intention} 
                 files: {file_array}
             ){{
                 _id,
@@ -69,8 +66,11 @@ class APIInvoker:
                 bucketName,
                 filePrefix,
                 type,
-                metadataIntention,
                 fileCount,
+                files {{
+                    fileID, 
+                    fileName,
+                }}
                 status,
                 createdAt
             }}
@@ -116,7 +116,6 @@ class APIInvoker:
                 _id,
                 submissionID,
                 type,
-                metadataIntention,
                 fileCount,
                 status,
                 updatedAt
