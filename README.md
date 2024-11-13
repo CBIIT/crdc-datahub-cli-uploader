@@ -128,3 +128,11 @@ Depends on how Python3 was installed, on some systems you need to use â€œpythonâ
 
 `$ python3 src/uploader.py --config configs/metadata-upload.yml`
 
+### Execute Upload Command for Binary File
+For **macOS/Linux**:
+
+`$ ./uploader --config configs/metadata-upload.yml`
+
+For **Windows**:
+
+`> uploader.exe --config configs/metadata-upload.yml`
