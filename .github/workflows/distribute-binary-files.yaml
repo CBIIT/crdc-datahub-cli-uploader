@@ -68,7 +68,7 @@ jobs:
           pip install pyinstaller  # Install pyinstaller
 
       - name: Build source code zip
-        run: zip -r crdc-datahub-cli-uploader.zip .
+        run: zip -r crdc-datahub-cli-uploader-src.zip .
 
 
       - name: Build macOS Intel binary & add configuration files and README.md
@@ -121,8 +121,8 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./crdc-datahub-cli-uploader.zip
-          asset_name: crdc-datahub-cli-uploader.zip
+          asset_path: ./crdc-datahub-cli-uploader-src.zip
+          asset_name: crdc-datahub-cli-uploader-src.zip
           asset_content_type: application/zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
