@@ -41,7 +41,8 @@ def controller():
     if validator.invalid_count == 0:
         #step 3: create a batch
         apiInvoker = APIInvoker(configs)
-        file_array = [{"fileName": item[FILE_NAME_DEFAULT], "size": item[FILE_SIZE_DEFAULT]} for item in file_list]
+        # file_array = [{"fileName": item[FILE_NAME_DEFAULT], "size": item[FILE_SIZE_DEFAULT]} for item in file_list]
+        file_array = [ item[FILE_NAME_DEFAULT] for item in file_list]
         newBatch = None
         if apiInvoker.create_batch(file_array):
             newBatch = apiInvoker.new_batch

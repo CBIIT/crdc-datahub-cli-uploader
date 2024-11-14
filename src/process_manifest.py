@@ -47,7 +47,8 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
         configs[UPLOAD_TYPE] = "metadata"
         apiInvoker = APIInvoker(configs)
         final_manifest_name = os.path.basename(final_manifest_path)
-        file_array = [{"fileName": final_manifest_name, "size": manifest_file_size}]
+        #file_array = [{"fileName": final_manifest_name, "size": manifest_file_size}]
+        file_array = [final_manifest_name]
         newBatch = None
         if apiInvoker.create_batch(file_array):
             
