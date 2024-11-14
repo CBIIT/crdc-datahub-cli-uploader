@@ -53,7 +53,8 @@ class APIInvoker:
     def create_batch(self, file_array):
         self.new_batch = None
         #adjust file list to match the graphql param.
-        file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
+        # file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
+        file_array = json.dumps(file_array)
         body = f"""
         mutation {{
             createBatch (
