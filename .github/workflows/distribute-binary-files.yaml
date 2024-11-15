@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-binary-files-windows:
-    runs-on: ubuntu-latest
+  build-binary-files-windows-and-source-code:
+    runs-on: windows-latest
     steps:
       - name: Printing the branch currently working on
         run: echo "BRANCH_NAME=${{ matrix.branch-name }}"
@@ -25,6 +25,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller  # Install pyinstaller
 
+      - name: Build source code zip
+        run: |
+          Compress-Archive -Path .\* -DestinationPath crdc-datahub-cli-uploader-src.zip
+        shell: pwsh
+
       - name: Build Windows binary & add configuration files and README.md
         run: |
           pyinstaller --onefile --distpath dist/windows --name uploader.exe src/uploader.py
@@ -34,7 +39,7 @@ jobs:
       - name: Compress Windows binary
         run: |
           cd dist/windows
-          zip -r ../../crdc-datahub-cli-uploader-windows.zip .
+          Compress-Archive -Path .\* -DestinationPath ../../crdc-datahub-cli-uploader-windows.zip
 
       - name: Upload Windows binary to release
         uses: actions/upload-release-asset@v1
@@ -46,7 +51,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-binary-macOS-files:
+      - name: Upload source code to release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./crdc-datahub-cli-uploader-src.zip
+          asset_name: crdc-datahub-cli-uploader-src.zip
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  build-binary-macOS-Apple-Silicon-files:
     runs-on: macos-latest  # GitHub needs a base runner
     steps:
       - name: Printing the branch currently working on
@@ -67,16 +81,6 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller  # Install pyinstaller
 
-      - name: Build source code zip
-        run: zip -r crdc-datahub-cli-uploader-src.zip .
-
-
-      - name: Build macOS Intel binary & add configuration files and README.md
-        run: |
-          pyinstaller --onefile --paths=src/bento --distpath dist/mac-x64 --name uploader src/uploader.py
-          cp -R configs dist/mac-x64
-          cp README.md dist/mac-x64
-
       - name: Build macOS Apple Silicon binary & add configuration files and README.md
         env:
           ARCHFLAGS: "-arch arm64"  # Ensures build for Apple Silicon
@@ -85,28 +89,11 @@ jobs:
           cp -R configs dist/mac-arm
           cp README.md dist/mac-arm
 
-      - name: Compress Binary macOS Intel Files
-        run: |
-          cd dist/mac-x64
-          zip -r ../../crdc-datahub-cli-uploader-mac-x64.zip .
-        shell: bash
-
       - name: Compress Binary Apple Silicon Files
         run: |
           cd dist/mac-arm
           zip -r ../../crdc-datahub-cli-uploader-mac-arm.zip .
         shell: bash
-
-      - name: Upload macOS Intel binary to release
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./crdc-datahub-cli-uploader-mac-x64.zip
-          asset_name: crdc-datahub-cli-uploader-mac-x64.zip
-          asset_content_type: application/zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload macOS Apple Silicon binary to release
         uses: actions/upload-release-asset@v1
         with:
@@ -116,13 +103,45 @@ jobs:
           asset_content_type: application/zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  build-binary-macOS-Intel-files:
+    runs-on: macos-13  # GitHub needs a base runner
+    steps:
+      - name: Printing the branch currently working on
+        run: echo "BRANCH_NAME=${{ matrix.branch-name }}"
+      - name: Check out the branch
+        uses: actions/checkout@v2
+        with:
+          submodules: true
 
-      - name: Upload source code to release
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller  # Install pyinstaller
+
+      - name: Build macOS Intel binary & add configuration files and README.md
+        run: |
+          pyinstaller --onefile --paths=src/bento --distpath dist/mac-x64 --name uploader src/uploader.py
+          cp -R configs dist/mac-x64
+          cp README.md dist/mac-x64
+
+      - name: Compress Binary Apple Intel Files
+        run: |
+          cd dist/mac-x64
+          zip -r ../../crdc-datahub-cli-uploader-mac-x64.zip .
+        shell: bash
+
+      - name: Upload macOS Intel binary to release
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./crdc-datahub-cli-uploader-src.zip
-          asset_name: crdc-datahub-cli-uploader-src.zip
+          asset_path: ./crdc-datahub-cli-uploader-mac-x64.zip
+          asset_name: crdc-datahub-cli-uploader-mac-x64.zip
           asset_content_type: application/zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
