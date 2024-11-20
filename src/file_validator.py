@@ -162,7 +162,7 @@ class FileValidator:
             try:
                 s3_bucket = S3Bucket()
                 s3_bucket.set_s3_client(bucket_name, None)
-                result, msg = s3_bucket.check_object_exist(key)
+                result, msg = s3_bucket.file_exists_on_s3(key)
                 if  result == False:
                     self.log.critical(msg)
                     return None
