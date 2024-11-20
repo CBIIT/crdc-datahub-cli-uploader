@@ -199,9 +199,6 @@ class FileValidator:
         except Exception as e:
             self.log.debug(e)
             self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
-        finally:
-            if is_s3_manifest and os.path.exists(self.pre_manifest):
-                os.remove(self.pre_manifest)
         return files_info
     """
     validate file id format
