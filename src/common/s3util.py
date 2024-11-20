@@ -45,6 +45,9 @@ class S3Bucket:
         except ClientError as e:
             if e.response['Error']['Code'] in ['404', '412']:
                 return False
+            if e.response['Error']['Code'] in ['403']:
+                self.log.error('Access Denied: Unable to access files in the specified S3 bucket path.')
+                return False
             else:
                 self.log.error('Unknown S3 client error!')
                 self.log.exception(e)
@@ -64,7 +67,15 @@ class S3Bucket:
             res = self.client.head_object(Bucket=self.bucket_name, Key=key)
             return res['ContentLength']
         except ClientError as e:
-            return None
+            if e.response['Error']['Code'] in ['404', '412']:
+                return None
+            if e.response['Error']['Code'] in ['403']:
+                self.log.error('Access Denied: Unable to access files in the specified S3 bucket path.')
+                return None
+            else:
+                self.log.error('Unknown S3 client error!')
+                self.log.exception(e)
+                return None   
 
     def same_size_file_exists(self, key, file_size):
         return file_size == self.get_object_size(key)
@@ -74,8 +85,15 @@ class S3Bucket:
             self.bucket.download_file( key, local_file_path)
             return True
         except ClientError as ce:
-            self.log.error(ce)
-            return False
+            if e.response['Error']['Code'] in ['404', '412']:
+                return False
+            if e.response['Error']['Code'] in ['403']:
+                self.log.error('Access Denied: Unable to access files in the specified S3 bucket path.')
+                return False
+            else:
+                self.log.error('Unknown S3 client error!')
+                self.log.exception(e)
+                return False   
         except Exception as e:
             self.log.error(e)
             return False
