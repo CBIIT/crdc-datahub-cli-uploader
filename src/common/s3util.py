@@ -48,7 +48,7 @@ class S3Bucket:
                 msg = f'File {key} does not exist in the specified S3 bucket path.'
                 return False, msg
             if e.response['Error']['Code'] in ['403']:
-                msg = f'Access Denied: Unable to access files in the specified S3 bucket path, {key}'
+                msg = f'Access Denied: Unable to access files in the specified S3 bucket path: {key}'
                 return False, msg
             else:
                 msg = f'Unknown S3 client error!'
@@ -74,7 +74,7 @@ class S3Bucket:
                 msg = f'File {key} does not exist in the specified S3 bucket path.'
                 return None, msg
             if e.response['Error']['Code'] in ['403']:
-                msg = f'Access Denied: Unable to access files in the specified S3 bucket path, {key}'
+                msg = f'Access Denied: Unable to access files in the specified S3 bucket path: {key}'
                 return None, msg
             else:
                 msg = f'Unknown S3 client error!'
@@ -94,7 +94,7 @@ class S3Bucket:
                 msg = f'File {key} does not exist in the specified S3 bucket path.'
                 return False, msg
             if e.response['Error']['Code'] in ['403']:
-                msg = f'Access Denied: Unable to access files in the specified S3 bucket path, {key}'
+                msg = f'Access Denied: Unable to access files in the specified S3 bucket path: {key}'
                 return False, msg
             else:
                 msg = f'Unknown S3 client error!'
