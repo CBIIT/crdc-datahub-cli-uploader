@@ -26,7 +26,7 @@ class FileUploader:
         self.prefix = configs[FILE_PREFIX]
         self.bucket_name = configs.get(S3_BUCKET)
         self.credential = configs.get(TEMP_CREDENTIAL)
-        self.pre_manifest = configs.get(PRE_MANIFEST)
+        # self.pre_manifest = configs.get(PRE_MANIFEST)
         self.file_info_list = file_list
         self.copier = None
         self.count = len(file_list)

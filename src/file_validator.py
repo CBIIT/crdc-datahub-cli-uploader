@@ -4,7 +4,7 @@ import os
 import glob
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger, get_md5
 from common.utils import extract_s3_info_from_url
@@ -56,9 +56,6 @@ class FileValidator:
                 self.fileList.append({FILE_NAME_DEFAULT:filename, FILE_PATH: filepath, FILE_SIZE_DEFAULT: size})
 
         elif self.uploadType == TYPE_FILE: #file
-            if not os.path.isfile(self.pre_manifest):
-                self.log.critical(f'manifest file is not valid!')
-                return False 
             try: 
                 return self.validate_size_md5()
             except Exception as e:
@@ -155,6 +152,29 @@ class FileValidator:
         files_info = []
         files_dict = {}
         manifest_rows = []
+        is_s3_manifest = self.pre_manifest.startswith(S3_START)
+        if is_s3_manifest:
+            s3_bucket = None
+            bucket_name, key = extract_s3_info_from_url(self.pre_manifest)
+            self.download_file_dir = TEMP_DOWNLOAD_DIR
+            os.makedirs(self.download_file_dir, exist_ok=True)
+            local_manifest = os.path.join(self.download_file_dir, key.split('/')[-1])
+            try:
+                s3_bucket = S3Bucket()
+                s3_bucket.set_s3_client(bucket_name, None)
+                if s3_bucket.file_exists_on_s3(key) == False:
+                    self.log.critical(f"Manifest file {self.pre_manifest} does not exist!")
+                    return None
+                s3_bucket.download_object(key, local_manifest)
+                self.pre_manifest = self.configs[PRE_MANIFEST] = local_manifest
+            except Exception as e:
+                self.log.debug(e)
+                self.log.exception(f"Downloading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
+                return None
+            finally:
+                if s3_bucket:
+                    s3_bucket.close()
+
         try:
             with open(self.pre_manifest) as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
