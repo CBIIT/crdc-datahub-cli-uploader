@@ -82,11 +82,11 @@ class S3Bucket:
                 return None, msg  
 
     def same_size_file_exists(self, key, file_size):
-        file_size, msg = self.get_object_size(key)
+        file_size1, msg = self.get_object_size(key)
         if msg:
             self.log.error(msg)
-            return None
-        return file_size
+            return False
+        return file_size == file_size1
     
     def download_object(self, key, local_file_path):
         try:
