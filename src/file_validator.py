@@ -119,9 +119,9 @@ class FileValidator:
                     self.log.error(invalid_reason)
                     continue
             else: # check file existing and validate file size in s3 bucket
-                s3_file_size = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
+                s3_file_size, msg = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
                 if not s3_file_size:
-                    invalid_reason += f"File {info[FILE_NAME_DEFAULT]} does not exist in {self.file_dir}!"
+                    invalid_reason += msg
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
                     self.invalid_count += 1
                     self.log.error(invalid_reason)
@@ -162,8 +162,9 @@ class FileValidator:
             try:
                 s3_bucket = S3Bucket()
                 s3_bucket.set_s3_client(bucket_name, None)
-                if s3_bucket.file_exists_on_s3(key) == False:
-                    self.log.critical(f"Manifest file {self.pre_manifest} does not exist!")
+                result, msg = s3_bucket.file_exists_on_s3(key)
+                if  result == False:
+                    self.log.critical(msg)
                     return None
                 s3_bucket.download_object(key, local_manifest)
                 self.pre_manifest = self.configs[PRE_MANIFEST] = local_manifest
