@@ -70,7 +70,7 @@ Put all data files to be uploaded in the same folder.
 ### Prepare manifest
 
 A manifest is a metadata (TSV) file that contains information about the data files to be uploaded. CLI tool will use this information to find, validate, and upload data files to Data Hub. There are 4 columns that are relevant to CLI tool:
-- the column containing file IDs
+- the column containing file IDs, unless you are updating existing data files and know the correct file IDs, manifest should not include this column, so that CLI will generate this column automatically. 
 - the column containing file names
 - the column containing file sizes
 - the column containing file MD5 checksums
@@ -80,7 +80,7 @@ Different Data Commons may have different column names, but they all contain the
 You can put a manifest in the same folder with the data files, or you can put it in a separate folder.
 
 ### Prepare configuration file
-- Make a copy of the example config file: “crdc-datahub-cli-uploader/configs/uploader-file-config.example.yml”, give it an appropriate name, in this document we name it “file-upload.yml”
+- Make a copy of the example config file: “configs/uploader-file-config.example.yml”, give it an appropriate name, in this document we name it “file-upload.yml”
 - Open the new config file with a text editor, preferably a code editor like Sublime Text, Notepad++, VSCode, Vim, Emacs etc. Please DO NOT use a word processor like Word or Pages to open the config file.
 - Configurations are in “key: value” format. There must be a space between colon and the value.
 - api-url: keep it unchanged, unless you are using an environment other than Data Hub production environment
@@ -106,7 +106,18 @@ You do not have to upload the this final manifest in the CRDC submission portal.
 
 If you need to update the content of the file manifest, then edit the final manifest and upload it through the CRDC submission portal.
 If you need to upload the data files again, then you can use the final manifest with the Uploader CLI tool. The Uploader CLI Tool will use the file IDs/Keys provided in this file manifest instead of generating new ones.
+
 ### Execute upload command
+
+For **macOS binary**:
+
+`$ ./uploader --config configs/file-upload.yml`
+
+For **Windows binary**:
+
+`> uploader.exe --config configs/file-upload.yml`
+
+For **Source code**:
 
 Depends on how Python3 was installed, on some systems you need to use “python” instead of “python3” in following command.
 
@@ -119,7 +130,7 @@ Depends on how Python3 was installed, on some systems you need to use “python�
 Put all metadata (TSV) files to be uploaded in the same folder.
 
 ### Prepare configuration file
-- Make a copy of the example config file: “crdc-datahub-cli-uploader/configs/ uploader-metadata-config.example.yml”, give it an appropriate name, in this document we name it “metadata-upload.yml”
+- Make a copy of the example config file: “configs/uploader-metadata-config.example.yml”, give it an appropriate name, in this document we name it “metadata-upload.yml”
 - Open the new config file with a text editor, preferably a code editor like Sublime Text, Notepad++, VSCode, Vim, Emacs etc. Please DO NOT use a word processor like Word or Pages to open the config file.
 - Configurations are in “key: value” format. There must be a space between colon and the value.
 - api-url: keep it unchanged, unless you are using an environment other than Data Hub production environment
@@ -133,15 +144,18 @@ Put all metadata (TSV) files to be uploaded in the same folder.
 
 ### Execute upload command
 
+For **macOS binary**:
+
+`$ ./uploader --config configs/metadata-upload.yml`
+
+For **Windows binary**:
+
+`> uploader.exe --config configs/metadata-upload.yml`
+
+For **Source code**:
+
 Depends on how Python3 was installed, on some systems you need to use “python” instead of “python3” in following command.
 
 `$ python3 src/uploader.py --config configs/metadata-upload.yml`
 
-### Execute Upload Command for Binary File
-For **macOS/Linux**:
 
-`$ ./uploader --config configs/metadata-upload.yml`
-
-For **Windows**:
-
-`> uploader.exe --config configs/metadata-upload.yml`
