@@ -84,7 +84,7 @@ class S3Bucket:
     def same_size_file_exists(self, key, file_size):
         file_size1, msg = self.get_object_size(key)
         if msg:
-            self.log.error(msg)
+            # self.log.error(msg)
             return False
         return file_size == file_size1
     
