@@ -111,10 +111,11 @@ class Config():
                 if manifest is None:
                     self.log.critical(f'Please provide “manifest” in configuration file or command line argument.')
                     return False
-                if not os.path.isfile(manifest): 
-                    self.log.critical(f'Manifest file “{manifest}” is not readable. Please make sure the path is correct and the file is readable.')
-                    return False
-                
+                if not manifest.startswith(S3_START):
+                    if not os.path.isfile(manifest): 
+                        self.log.critical(f'Manifest file “{manifest}” is not readable. Please make sure the path is correct and the file is readable.')
+                        return False
+
                 self.data[PRE_MANIFEST]  = manifest
                 #check header names in manifest file
                 file_name_header= self.data.get(FILE_NAME_FIELD)

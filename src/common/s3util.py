@@ -32,7 +32,28 @@ class S3Bucket:
             self.bucket = self.s3.Bucket(bucket)
             self.credential = None
         
-       
+    def file_exists_on_s3(self, key):
+        '''
+        Check if file exists in S3, return True only if file exists
+
+        :param key: file path
+        :return: boolean
+        '''
+        try:
+            self.client.head_object(Bucket=self.bucket.name, Key=key)
+            return True, None
+        except ClientError as e:
+            msg = None
+            if e.response['Error']['Code'] in ['404', '412']:
+                msg = f'File {key} does not exist in the specified S3 bucket path.'
+                return False, msg
+            if e.response['Error']['Code'] in ['403']:
+                msg = f'Access Denied: Unable to access files in the specified S3 bucket path: {key}'
+                return False, msg
+            else:
+                msg = f'Unknown S3 client error!'
+                self.log.exception(e)
+                return False, msg  
 
     def put_file_obj(self, key, data, md5_base64):
         return self.bucket.put_object(Key=key,
@@ -46,23 +67,48 @@ class S3Bucket:
     def get_object_size(self, key):
         try:
             res = self.client.head_object(Bucket=self.bucket_name, Key=key)
-            return res['ContentLength']
+            return res['ContentLength'], None
         except ClientError as e:
-            return None
+            msg = None
+            if e.response['Error']['Code'] in ['404', '412']:
+                msg = f'File {key} does not exist in the specified S3 bucket path.'
+                return None, msg
+            if e.response['Error']['Code'] in ['403']:
+                msg = f'Access Denied: Unable to access files in the specified S3 bucket path: {key}'
+                return None, msg
+            else:
+                msg = f'Unknown S3 client error!'
+                self.log.exception(e)
+                return None, msg  
 
     def same_size_file_exists(self, key, file_size):
-        return file_size == self.get_object_size(key)
+        file_size1, msg = self.get_object_size(key)
+        if msg:
+            # self.log.error(msg)
+            return False
+        return file_size == file_size1
     
     def download_object(self, key, local_file_path):
         try:
             self.bucket.download_file( key, local_file_path)
-            return True
+            return True, None
         except ClientError as ce:
-            self.log.error(ce)
-            return False
+            msg = None
+            if e.response['Error']['Code'] in ['404', '412']:
+                msg = f'File {key} does not exist in the specified S3 bucket path.'
+                return False, msg
+            if e.response['Error']['Code'] in ['403']:
+                msg = f'Access Denied: Unable to access files in the specified S3 bucket path: {key}'
+                return False, msg
+            else:
+                msg = f'Unknown S3 client error!'
+                self.log.exception(e)
+                return False, msg  
         except Exception as e:
+            # 
+            msg = f'Unknown error!'
             self.log.error(e)
-            return False
+            return False,
         
     def close(self):
         self.client.close()
