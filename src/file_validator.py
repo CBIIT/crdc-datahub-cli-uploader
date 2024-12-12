@@ -81,8 +81,9 @@ class FileValidator:
             self.from_bucket_name, self.from_prefix = extract_s3_info_from_url(self.file_dir)
             self.s3_bucket = S3Bucket()
             self.s3_bucket.set_s3_client(self.from_bucket_name, None)
-        line_num = 2
+        line_num = 1
         for info in self.files_info:
+            line_num += 1
             invalid_reason = ""
             file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, info[FILE_NAME_DEFAULT])
             size = info.get(FILE_SIZE_DEFAULT)
@@ -144,7 +145,7 @@ class FileValidator:
                 continue
 
             self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: True, ERRORS: None})
-            line_num += 1
+            
         return True
     
     #public function to read pre-manifest and return list of file records 
@@ -210,7 +211,7 @@ class FileValidator:
             if self.configs[OMIT_DCF_PREFIX] == False:
                 msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like "dg.4DFC/e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
                 if not id.startswith("dg.4DFC/"):
-                    self.log.error(msg)
+                    # self.log.error(msg)
                     return False, msg
                 else:
                     uuid = id.split('/')[1]
@@ -220,7 +221,7 @@ class FileValidator:
             else:
                 if(not is_valid_uuid(id)):
                     msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like "e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
-                    self.log.error(msg)
+                    # self.log.error(msg)
                     return False, msg 
         else:
             if self.has_file_id:
