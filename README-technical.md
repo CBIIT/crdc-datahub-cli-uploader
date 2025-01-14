@@ -57,11 +57,6 @@ Usage of the CLI tool:
     Following arguments are needed to read important data from manifest, conditional required when type = “data file”
 
     -m --manifest, path to manifest file, conditional required when type = “data file”
-    -n --name-field
-    -s --size-field
-    -m --md5-field
-    -i --id-field
-    -o --omit-DCF-prefix
 
     CLI configuration module will validate and combine parameters from CLI and/or config file
     If config_file is given, then everything else is potentially optional (if it’s included in config file)
