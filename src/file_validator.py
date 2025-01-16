@@ -226,7 +226,7 @@ class FileValidator:
         else:
             if self.has_file_id:
                 msg = f'Line {line_num}: "{id_field_name}" is required but not provided. You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
-                self.log.error(msg)
+                # self.log.error(msg)
                 return False, msg
                 
         return True, None
