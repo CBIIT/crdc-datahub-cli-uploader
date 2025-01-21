@@ -166,7 +166,9 @@ class APIInvoker:
             if status == 200:
                 results = response.json()
                 if results.get("errors"):
-                    self.log.error(f'Get data file config failed: {results.get("errors")[0].get("message")}.')
+                    msg = f'Get data file config failed: {results.get("errors")[0].get("message")}.'
+                    self.log.error(msg)
+                    return False, None
                 else:
                     data_file_config = results.get("data").get("retrieveFileNodeConfig")
                     if data_file_config:

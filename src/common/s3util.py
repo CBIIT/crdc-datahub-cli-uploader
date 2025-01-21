@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+import os
 import boto3
+from boto3.s3.transfer import TransferConfig, S3Transfer
+from tqdm import tqdm  # For progress bar
 from botocore.exceptions import ClientError
 
 from bento.common.utils import get_logger
@@ -55,14 +58,29 @@ class S3Bucket:
                 self.log.exception(e)
                 return False, msg  
 
-    def put_file_obj(self, key, data, md5_base64):
-        return self.bucket.put_object(Key=key,
-                                      Body=data,
-                                      ContentMD5=md5_base64,
-                                      ACL= BUCKET_OWNER_ACL)
+    def put_file_obj(self, file_size, key, data, md5_base64):
+        # Initialize the progress bar
+        progress = create_progress_bar(file_size)
+        chunk_size = 1024 * 1024 #chunk data for display progress for small metadata file < 4,500,000,000 bytes
+        try:
+            # Upload the file in chunks
+            for chunk in iter(lambda: data.read(chunk_size), b''):
+                self.bucket.put_object(Key=key,
+                                        Body=data,
+                                        ContentMD5=md5_base64,
+                                        ACL= BUCKET_OWNER_ACL,
+                                        )
+                # Update the progress bar
+                progress.update(len(chunk))
+        finally:
+            # Close the progress bar
+            progress.close()
 
-    def upload_file_obj(self, key, data, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
-        return self.bucket.upload_fileobj(data, key, ExtraArgs=extra_args, Config=config)
+    def upload_file_obj(self, file_size, key, data, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
+        self.bucket.upload_fileobj(
+            data, key, ExtraArgs=extra_args, Config=config,
+            Callback=ProgressPercentage(file_size)
+        )
 
     def get_object_size(self, key):
         try:
@@ -90,7 +108,7 @@ class S3Bucket:
     
     def download_object(self, key, local_file_path):
         try:
-            self.bucket.download_file( key, local_file_path)
+            self.bucket .download_file( key, local_file_path)
             return True, None
         except ClientError as ce:
             msg = None
@@ -115,5 +133,26 @@ class S3Bucket:
         self.client = None
         self.bucket = None
         self.s3 = None
+
+"""
+S3 util class to display upload progress
+"""
+class ProgressPercentage(object):
+    def __init__(self, file_size):
+        self._size = file_size
+        self._seen_so_far = 0
+        self._progress = create_progress_bar(file_size)
+
+    def __call__(self, bytes_amount):
+        self._seen_so_far += bytes_amount
+        self._progress.update(bytes_amount)
+
+    def __del__(self):
+        self._progress.close() 
+
+def create_progress_bar(file_size):
+    progress_bar = tqdm(total= file_size, unit='B', unit_scale=True, desc="Progress",
+                              bar_format="{l_bar}\033[1;32m{bar}\033[0m| {n_fmt}/{total_fmt} [elapsed: {elapsed}|remaining: {remaining}, {rate_fmt}]")
+    return progress_bar
         
 

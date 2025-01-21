@@ -112,6 +112,8 @@ class FileUploader:
                     else:
                         self._deal_with_failed_file(job, file_queue)
 
+                    self.log.info(f'{self.copier.files_copied} out of {len(self.file_info_list)} files have been uploaded to destination.')
+
             if self.invalid_count > 0:
                 self.log.info(f"{self.invalid_count} files are invalid and uploading skipped!")
                 return False
