@@ -93,7 +93,7 @@ class FileUploader:
                         self.invalid_count += 1
                         continue
                     else:
-                        self.log.info(f"Download {file_info[FILE_NAME_DEFAULT]} from {self.file_dir} successfully!")
+                        self.log.info(f"Downloaded {file_info[FILE_NAME_DEFAULT]} from {self.file_dir} successfully!")
                         # validate size and md5 of downloaded data file
                         if not self._validate_downloaded_file(file_info, file_path):
                             os.remove(file_path)

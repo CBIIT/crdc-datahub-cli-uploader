@@ -62,7 +62,7 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
             print(f"New batch is created: {newBatch.get(BATCH_ID)} at {newBatch[BATCH_CREATED]}")
             uploader = Copier(configs[S3_BUCKET], configs[FILE_PREFIX] , configs)
             result = uploader.copy_file({FILE_NAME_DEFAULT: final_manifest_name, FILE_PATH: final_manifest_path, FILE_SIZE_DEFAULT: manifest_file_size}, True, False)  
-            print(f'The final manifest, "{final_manifest_name}" has been uploaded to destination successfully.')
+            print(f'The manifest, "{final_manifest_name}" has been uploaded to destination successfully.')
     except Exception as e:
         print(f"Failed to add file id to the pre-manifest, {file_path}. Error: {e}") 
     finally:
