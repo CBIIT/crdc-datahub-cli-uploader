@@ -108,7 +108,9 @@ class S3Bucket:
     
     def download_object(self, key, local_file_path):
         try:
-            self.bucket .download_file( key, local_file_path)
+            file_size, msg = self.get_object_size(key)
+            self.bucket.download_file(key, local_file_path,
+                                      Callback=ProgressPercentage(file_size))
             return True, None
         except ClientError as ce:
             msg = None

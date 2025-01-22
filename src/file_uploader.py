@@ -84,6 +84,7 @@ class FileUploader:
                 file_info = job[self.INFO]
                 file_path = file_info[FILE_PATH]
                 if self.from_s3 == True: #download file from s3
+                    self.log.info(f"Downloading {file_info[FILE_NAME_DEFAULT]} from {self.file_dir} ...")
                     result, msg = self.s3_bucket.download_object(os.path.join(self.from_prefix, file_info[FILE_NAME_DEFAULT]), file_path)
                     if not result: 
                         invalid_reason = msg
