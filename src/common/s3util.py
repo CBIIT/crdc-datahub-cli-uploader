@@ -66,7 +66,7 @@ class S3Bucket:
             # Upload the file in chunks
             for chunk in iter(lambda: data.read(chunk_size), b''):
                 self.bucket.put_object(Key=key,
-                                        Body=data,
+                                        Body=chunk,
                                         ContentMD5=md5_base64,
                                         ACL= BUCKET_OWNER_ACL,
                                         )
