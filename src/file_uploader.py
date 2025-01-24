@@ -78,15 +78,15 @@ class FileUploader:
     def upload(self):
         """
           Read file information from pre-manifest and copy them one by one to destination bucket
-          :return:
+          :return: bool
         """
         self._set_from_s3() #reset from s3 bucket, prefix
-        self.copier = Copier(self.bucket_name, self.prefix, self.configs)
         upload_file_list = self._prepare_files()
         if self.invalid_count > 0:
             self.log.info(f"{self.invalid_count} files are invalid and uploading skipped!")
             return False
         
+        self.copier = Copier(self.bucket_name, self.prefix, self.configs)
         file_queue = deque(upload_file_list)
         uploaded_file_volume = 0
         print_start_upload_message(self.count, self.total_file_volume)
