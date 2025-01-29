@@ -232,7 +232,7 @@ class FileUploader:
         """
         eclipse_time = "00:00:00" if uploaded_file_cnt == total_file_cnt else calculate_remain(total_file_volume, uploaded_file_volume, start_at)
 
-        self.log.info(f'{uploaded_file_cnt} files ({format_size(uploaded_file_volume)}) out of {total_file_cnt} files ({format_size(total_file_volume)}) have been uploaded to destination in {calculate_eclipse(start_at)}, remaining uploading time: {eclipse_time}.')
+        self.log.info(f'{uploaded_file_cnt} ({format_size(uploaded_file_volume)}) out of {total_file_cnt} files ({format_size(total_file_volume)}) have been uploaded to destination in {calculate_eclipse(start_at)}, remaining uploading time: {eclipse_time}.')
 
 """
 utile functions
