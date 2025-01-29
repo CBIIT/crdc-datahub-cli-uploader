@@ -5,7 +5,7 @@ from datetime import datetime
 from bento.common.utils import get_logger, get_md5
 from common.constants import FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  OVERWRITE, DRY_RUN,\
     PRE_MANIFEST, S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH,FILE_SIZE_DEFAULT, MD5_DEFAULT, TEMP_DOWNLOAD_DIR
-from common.utils import extract_s3_info_from_url, measure_upload_speed, format_size, calculate_eclipse_time, format_time
+from common.utils import extract_s3_info_from_url, format_size, calculate_eclipse_time, format_time
 from common.s3util import S3Bucket
 from copier import Copier
 

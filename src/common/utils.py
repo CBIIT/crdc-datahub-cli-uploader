@@ -1,7 +1,6 @@
 
 import sys
 import csv
-import speedtest
 from uuid import UUID
 from datetime import datetime
 from common.constants import S3_START
@@ -95,20 +94,6 @@ def extract_s3_info_from_url(url):
     bucket_name = split_list[0]
     prefix = "/".join(split_list[1:])
     return bucket_name, prefix
-
-"""
-Measure upload speed in bps
-"""
-def measure_upload_speed():
-    try:
-        st = speedtest.Speedtest()
-        st.get_best_server()
-        upload_speed = st.upload()  # bps
-        return upload_speed
-    except Exception as e:
-        print(f"Failed to measuring upload speed: {e}")
-        return -1
-
 
 def format_size(size_in_bytes):
     """
