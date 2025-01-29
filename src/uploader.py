@@ -26,7 +26,7 @@ def controller():
     config = Config()
     if not config.validate():
         log.error("Failed to upload files: missing required valid parameter(s)!")
-        print("Failed to upload files: invalid parameter(s)!  Please check log file in tmp folder for details.")
+        log.info("Failed to upload files: invalid parameter(s)!  Please check log file in tmp folder for details.")
         return 1
     
     #step 2: validate file or metadata
@@ -38,18 +38,18 @@ def controller():
         result, data_file_config = apiInvoker.get_data_file_config(configs["submission"])
         if not result or not data_file_config:
             log.error("Failed to upload files: can't get data file config!")
-            print("Failed to upload files: can't get data file config! Please check log file in tmp folder for details.")
+            log.info("Failed to upload files: can't get data file config! Please check log file in tmp folder for details.")
             return 1
 
         if not config.validate_file_config(data_file_config):
             log.error("Failed to upload files: invalid file config!")
-            print("Failed to upload files: invalid file config! Please check log file in tmp folder for details.")
+            log.info("Failed to upload files: invalid file config! Please check log file in tmp folder for details.")
             return 1
 
     validator = FileValidator(configs)
     if not validator.validate():
         log.error("Failed to upload files: found invalid file(s)!")
-        print("Failed to upload files: found invalid file(s)!  Please check log file in tmp folder for details.")
+        log.info("Failed to upload files: found invalid file(s)!  Please check log file in tmp folder for details.")
         return 1
     file_list = validator.fileList
 
@@ -62,7 +62,7 @@ def controller():
             newBatch = apiInvoker.new_batch
             if not newBatch.get(BATCH_BUCKET) or not newBatch[FILE_PREFIX] or not newBatch.get(BATCH_ID):
                 log.error("Failed to upload files: can't create new batch!")
-                print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
+                log.info("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
                 return 1
             configs[S3_BUCKET] = newBatch.get(BATCH_BUCKET)
             configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
@@ -71,13 +71,13 @@ def controller():
             log.info(f"New batch is created: {configs[BATCH_ID]} at {newBatch[BATCH_CREATED]}")
         else:
             log.error("Failed to upload files: can't create new batch!")
-            print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
+            log.info("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
             return 1
 
         #step 4: get aws sts temp credential for uploading files to s3 bucket.
         if not apiInvoker.get_temp_credential():
             log.error("Failed to upload files: can't get temp credential!")
-            print("Failed to upload files: can't get temp credential! Please check log file in tmp folder for details.")
+            log.info("Failed to upload files: can't get temp credential! Please check log file in tmp folder for details.")
             #set fileList for update batch
             file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": False, "errors": ["Failed to upload files: can't get temp credential!"]} for item in file_list]
         else:
@@ -89,13 +89,13 @@ def controller():
                 result = loader.upload()
                 if not result:
                     log.error("Failed to upload files: can't upload files to bucket!")
-                    print("Failed to upload files: can't upload files to bucket! Please check log file in tmp folder for details.")
+                    log.info("Failed to upload files: can't upload files to bucket! Please check log file in tmp folder for details.")
                 else:
                     #write filelist to tsv file and save to result dir
-                    print("File uploading completed!")
+                    log.info("File uploading completed!")
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
-                        process_manifest_file(configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)
+                        process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)
             except KeyboardInterrupt:
                 log.info('File uploading is interrupted.')
             finally: 
@@ -111,7 +111,7 @@ def controller():
                     log.info(f"The batch is updated: {newBatch[BATCH_ID]} with new status: {batch[BATCH_STATUS]} at {batch[BATCH_UPDATED]} ")
                 else:
                     log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
-                    print(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
+                    log.info(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
     
     else:
         log.error(f"Found total {validator.invalid_count} file(s) are invalid!")
@@ -122,9 +122,9 @@ def controller():
         #filter out file path in the file list
         file_list = [ {i:a[i] for i in a if i!=FILE_PATH} for a in file_list]
         dump_dict_to_tsv(file_list, file_path)
-        print(f"Uploading report is created at {file_path}!")
+        log.info(f"Uploading report is created at {file_path}!")
     except Exception as e:
         log.exception(f"Failed to dump uploading report files: {get_exception_msg()}.")
-        print(f"Failed to dump uploading report files: {get_exception_msg()}.")
+        log.info(f"Failed to dump uploading report files: {get_exception_msg()}.")
 if __name__ == '__main__':
     controller()

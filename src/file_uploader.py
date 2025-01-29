@@ -89,7 +89,7 @@ class FileUploader:
         self.copier = Copier(self.bucket_name, self.prefix, self.configs)
         file_queue = deque(upload_file_list)
         uploaded_file_volume = 0
-        print_start_upload_message(self.count, self.total_file_volume)
+        self.print_start_upload_message(self.count, self.total_file_volume)
         start_uploading_at = datetime.now()
         try:
             while file_queue:
@@ -110,7 +110,7 @@ class FileUploader:
                 uploaded_file_volume += file_info[FILE_SIZE_DEFAULT]
                 
                 # self.log.info(f'{self.copier.files_copied} out of {len(self.file_info_list)} files have been uploaded to destination.')
-                print_progress_message(self.count, self.copier.files_copied, self.total_file_volume, uploaded_file_volume, start_uploading_at)
+                self.print_progress_message(self.count, self.copier.files_copied, self.total_file_volume, uploaded_file_volume, start_uploading_at)
                    
             self.log.info(f'Files processed: {self.files_processed}')
             self.log.info(f'Files not found: {len(self.copier.files_not_found)}')
@@ -208,35 +208,35 @@ class FileUploader:
                 return False
         return True
 
+    
+    def print_start_upload_message(self, total_file_cnt, total_file_volume):
+        """
+        Print start message for file uploading.
+
+        :param total_file_cnt: Total number of files to be uploaded.
+        :param total_file_volume: Total volume of files in bytes.
+        :return: None
+        """
+        self.log.info(f'Total {total_file_cnt} files ({format_size(total_file_volume)}) will be uploaded to destination.') 
+
+    def print_progress_message(self, total_file_cnt, uploaded_file_cnt, total_file_volume, uploaded_file_volume, start_at):
+        """
+        Print progress message for file uploading.
+
+        :param total_file_cnt: Total number of files to be uploaded.
+        :param uploaded_file_cnt: Number of files uploaded so far.
+        :param total_file_volume: Total volume of files in bytes.
+        :param uploaded_file_volume: Volume of uploaded files in bytes.
+        :param start_at: A datetime object representing the start time of the eclipse.
+        :return: None
+        """
+        eclipse_time = "00:00:00" if uploaded_file_cnt == total_file_cnt else calculate_remain(total_file_volume, uploaded_file_volume, start_at)
+
+        self.log.info(f'{uploaded_file_cnt} files ({format_size(uploaded_file_volume)}) out of {total_file_cnt} files ({format_size(total_file_volume)}) have been uploaded to destination in {calculate_eclipse(start_at)}, remaining uploading time: {eclipse_time}.')
+
 """
 utile functions
 """
-def print_start_upload_message(total_file_cnt, total_file_volume):
-    """
-    Print start message for file uploading.
-
-    :param total_file_cnt: Total number of files to be uploaded.
-    :param total_file_volume: Total volume of files in bytes.
-    :return: None
-    """
-    print(f'Total {total_file_cnt} files ({format_size(total_file_volume)}) will be uploaded to destination.') 
-
-def print_progress_message(total_file_cnt, uploaded_file_cnt, total_file_volume, uploaded_file_volume, start_at):
-    """
-    Print progress message for file uploading.
-
-    :param total_file_cnt: Total number of files to be uploaded.
-    :param uploaded_file_cnt: Number of files uploaded so far.
-    :param total_file_volume: Total volume of files in bytes.
-    :param uploaded_file_volume: Volume of uploaded files in bytes.
-    :param start_at: A datetime object representing the start time of the eclipse.
-    :return: None
-    """
-    if uploaded_file_cnt == total_file_cnt:
-        print(f'{uploaded_file_cnt} files ({format_size(uploaded_file_volume)}) out of {total_file_cnt} files ({format_size(total_file_volume)}) have been uploaded to destination in {calculate_eclipse(start_at)}, remaining uploading time: 00:00:00.')
-    else:
-        print(f'{uploaded_file_cnt} files ({format_size(uploaded_file_volume)}) out of {total_file_cnt} files ({format_size(total_file_volume)}) have been uploaded to destination in {calculate_eclipse(start_at)}, remaining uploading time: {calculate_remain(total_file_volume, uploaded_file_volume, start_at)}.')
-
 def calculate_eclipse(start_time):
     """
     Calculate the duration of an eclipse in hh:mm:ss format given the start time.
