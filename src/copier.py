@@ -102,12 +102,12 @@ class Copier:
             else: 
                 file_info[SKIPPED] = False
             #self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
-            self.log.info(f'Copying from {org_url} to destination folder in S3 bucket ...')
-            dest_size, msg = self._upload_obj(org_url, key, org_size)
+            self.log.info(f'Uploading file, "{org_url}" to destination...')
+            dest_size = self._upload_obj(org_url, key, org_size)
             if dest_size != org_size:
                 self.log.error(f'Uploading “{file_name}” failed - uploading was not complete. Please try again and contact the helpdesk if this error persists.')
                 return {self.STATUS: False}
-
+            
             return succeed
         except ClientError as ce:
             self.log.debug(ce)
@@ -137,13 +137,13 @@ class Copier:
             t_config = TransferConfig(multipart_threshold=self.MULTI_PART_THRESHOLD,
                                         multipart_chunksize=chunk_size)
             with open(org_url, 'rb') as stream:
-                self.bucket.upload_file_obj(key, stream, t_config)
+                self.bucket.upload_file_obj(org_size, key, stream, t_config)
         else: #small file
             md5_obj = get_md5_hex_n_base64(org_url)
             md5_base64 = md5_obj['base64']
             with open(org_url, 'rb') as data:
-                self.bucket.put_file_obj(key, data, md5_base64)
-
+                self.bucket.put_file_obj(org_size, key, data, md5_base64 )
+            
         self.files_copied += 1
-        self.log.info(f'Copying file {key} SUCCEEDED!')
-        return self.bucket.get_object_size(key)
+        size, msg =  self.bucket.get_object_size(key)
+        return size

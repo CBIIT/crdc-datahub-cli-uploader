@@ -4,6 +4,7 @@ import csv
 from uuid import UUID
 from datetime import datetime
 from common.constants import S3_START
+import os
 
 """ 
 clean_up_key_value(dict)
@@ -93,5 +94,55 @@ def extract_s3_info_from_url(url):
     bucket_name = split_list[0]
     prefix = "/".join(split_list[1:])
     return bucket_name, prefix
+
+def format_size(size_in_bytes):
+    """
+    Convert a size in bytes to a human-readable format with proper units.
+    """
+    # Define the units and their respective thresholds
+    units = ["Bytes", "KB", "MB", "GB", "TB", "PB"]
+    unit_index = 0
+
+    # Convert to the appropriate unit
+    while size_in_bytes >= 1024 and unit_index < len(units) - 1:
+        size_in_bytes /= 1024
+        unit_index += 1
+
+    # Return the formatted string with 2 decimal places
+    return f"{size_in_bytes:.2f} {units[unit_index]}"
+
+def calculate_eclipse_time(file_size, upload_speed):
+    """
+    Calculate the upload time in hh:mm:ss format given the file size and upload speed.
+    
+    :param file_size: Size of the file in bytes.
+    :param upload_speed: Upload speed in bps (megabits per second).
+    :return: Upload time in hh:mm:ss format.
+    """
+    # Convert file size from bytes to bits (1 byte = 8 bits)
+    file_size_bits = file_size * 8
+    
+    # Calculate total upload time in seconds
+    upload_time_seconds = file_size_bits / upload_speed
+
+    # Format the time as hh:mm:ss
+    return format_time(upload_time_seconds)
+
+def format_time(seconds):
+    """
+    Format seconds into hh:mm:ss format.
+
+    :param seconds: Time in seconds.
+    :return: Formatted time string in hh:mm:ss format.
+    """
+    if seconds < 1:
+        return "less than 1 sec"
+    hours = int(seconds // 3600)
+    remaining_seconds = seconds % 3600
+    minutes = int(remaining_seconds // 60)
+    seconds = int(remaining_seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                           
+    
 
 

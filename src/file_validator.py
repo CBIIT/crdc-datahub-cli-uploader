@@ -167,7 +167,9 @@ class FileValidator:
                 if  result == False:
                     self.log.critical(msg)
                     return None
+                self.log.info(f'Downloading remote manifest file, "{self.pre_manifest}" ...')
                 s3_bucket.download_object(key, local_manifest)
+                self.log.info(f'Downloaded remote manifest file, "{self.pre_manifest}" successfully.')
                 self.pre_manifest = self.configs[PRE_MANIFEST] = local_manifest
             except Exception as e:
                 self.log.debug(e)
