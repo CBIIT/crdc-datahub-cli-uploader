@@ -153,7 +153,7 @@ class ProgressPercentage(object):
         self._progress.close() 
 
 def create_progress_bar(file_size):
-    progress_bar = tqdm(total= file_size, unit='B', unit_scale=True, desc="Progress",
+    progress_bar = tqdm(total= file_size, unit='B', unit_scale=True, desc="Progress", smoothing=0.0,
                               bar_format="{l_bar}\033[1;32m{bar}\033[0m| {n_fmt}/{total_fmt} [elapsed: {elapsed} | remaining: {remaining}, {rate_fmt}]")
     return progress_bar
         
