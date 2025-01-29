@@ -219,20 +219,7 @@ def print_start_upload_message(total_file_cnt, total_file_volume):
     :param total_file_volume: Total volume of files in bytes.
     :return: None
     """
-    total_eclipse_time = None
-    upload_speed = 0
-    if total_file_volume > 1024 * 1024: #more then one MB
-        upload_speed = measure_upload_speed() 
-    else:
-        total_eclipse_time = "less than one sec"
-
-    if upload_speed > 0:
-        total_eclipse_time = calculate_eclipse_time(total_file_volume, upload_speed) 
-
-    if total_eclipse_time:
-        print(f'Total {total_file_cnt} files ({format_size(total_file_volume)}) will be uploaded to destination within about {total_eclipse_time}.')
-    else:
-        print(f'Total {total_file_cnt} files ({format_size(total_file_volume)}) will be uploaded to destination.')  #if failed to determine the speed and file size larger than 1MB
+    print(f'Total {total_file_cnt} files ({format_size(total_file_volume)}) will be uploaded to destination.') 
 
 def print_progress_message(total_file_cnt, uploaded_file_cnt, total_file_volume, uploaded_file_volume, start_at):
     """
