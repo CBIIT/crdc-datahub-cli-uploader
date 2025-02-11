@@ -41,6 +41,8 @@ jobs:
           cd dist/windows
           Compress-Archive -Path .\* -DestinationPath ../../crdc-datahub-cli-uploader-windows.zip
 
+      - name: Debug GitHub Context
+        run: echo 'test---- ${{ toJson(github.event) }}'
       - name: Upload Windows binary to release
         uses: actions/upload-release-asset@v1
         with:
