@@ -41,6 +41,16 @@ jobs:
           cd dist/windows
           Compress-Archive -Path .\* -DestinationPath ../../crdc-datahub-cli-uploader-windows.zip
 
+      - name: Get Latest Release Upload URL
+        id: get_release
+        run: |
+          UPLOAD_URL=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r .upload_url)
+          echo "UPLOAD_URL=${UPLOAD_URL}" >> $GITHUB_ENV
+
+      - name: Debug Upload URL
+        run: echo "Upload URL is $UPLOAD_URL"
+
       - name: Upload Windows binary to release
         uses: actions/upload-release-asset@v1
         with:
