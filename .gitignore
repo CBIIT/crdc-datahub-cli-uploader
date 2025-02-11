@@ -141,3 +141,5 @@ backup/
 
 #config files for testing
 **/configs/test*
+
+*temp
