@@ -126,7 +126,7 @@ class FileValidator:
                     continue
                 #calculate file md5
                 # check if md5 is in cache by file name and file size
-                cached_md5 = [row[MD5_DEFAULT] for row in self.md5_cache if row[FILE_NAME_DEFAULT] == info[FILE_NAME_DEFAULT] and row[FILE_SIZE_DEFAULT] == file_size]
+                cached_md5 = [row[MD5_DEFAULT] for row in self.md5_cache if row[FILE_NAME_DEFAULT] == info[FILE_NAME_DEFAULT]and row[FILE_SIZE_DEFAULT] == str(file_size)]
                 if not cached_md5 or len(cached_md5) == 0:
                     md5sum = get_file_md5(file_path, file_size, self.log)
                     self.md5_cache.append({FILE_NAME_DEFAULT: info[FILE_NAME_DEFAULT], FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum})
