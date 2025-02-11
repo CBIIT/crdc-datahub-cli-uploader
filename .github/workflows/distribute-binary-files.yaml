@@ -59,7 +59,7 @@ jobs:
       - name: Upload Windows binary to release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./crdc-datahub-cli-uploader-windows.zip
           asset_name: crdc-datahub-cli-uploader-windows.zip
           asset_content_type: application/zip
@@ -69,7 +69,7 @@ jobs:
       - name: Upload source code to release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./crdc-datahub-cli-uploader-src.zip
           asset_name: crdc-datahub-cli-uploader-src.zip
           asset_content_type: application/zip
@@ -112,7 +112,7 @@ jobs:
       - name: Upload macOS Apple Silicon binary to release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./crdc-datahub-cli-uploader-mac-arm.zip
           asset_name: crdc-datahub-cli-uploader-mac-arm.zip
           asset_content_type: application/zip
@@ -154,7 +154,7 @@ jobs:
       - name: Upload macOS Intel binary to release
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ env.UPLOAD_URL }}
           asset_path: ./crdc-datahub-cli-uploader-mac-x64.zip
           asset_name: crdc-datahub-cli-uploader-mac-x64.zip
           asset_content_type: application/zip
