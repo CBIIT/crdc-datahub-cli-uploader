@@ -4,11 +4,12 @@ import os
 import glob
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
-from bento.common.utils import get_logger, get_md5
+from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url
 from common.s3util import S3Bucket
+from common.md5_calculator import get_file_md5
 
 
 """ Requirement for the ticket crdcdh-343
@@ -34,6 +35,8 @@ class FileValidator:
         self.from_bucket_name = None
         self.from_prefix = None
         self.s3_bucket = None
+        self.md5_cache = []
+        self.md5_cache_file = None
 
     def validate(self):
         # check file dir
@@ -82,6 +85,16 @@ class FileValidator:
             self.s3_bucket = S3Bucket()
             self.s3_bucket.set_s3_client(self.from_bucket_name, None)
         line_num = 1
+        self.log.info(f'Start to validate data files.')
+        # retrieve cached md5 info
+        # check if md5 cache dir exists
+        os.makedirs(MD5_CACHE_DIR, exist_ok=True)
+        self.md5_cache_file = os.path.join(MD5_CACHE_DIR, MD5_CACHE_FILE)
+        if os.path.isfile(self.md5_cache_file):
+            # read md5 cache file to dict
+            with open(self.md5_cache_file) as f:
+                reader = csv.DictReader(f)
+                self.md5_cache = [row for row in reader]  
         for info in self.files_info:
             line_num += 1
             invalid_reason = ""
@@ -112,7 +125,13 @@ class FileValidator:
                     self.log.error(invalid_reason)
                     continue
                 #calculate file md5
-                md5sum = get_md5(file_path)
+                # check if md5 is in cache by file name and file size
+                cached_md5 = [row[MD5_DEFAULT] for row in self.md5_cache if row[FILE_NAME_DEFAULT] == info[FILE_NAME_DEFAULT] and row[FILE_SIZE_DEFAULT] == file_size]
+                if not cached_md5 or len(cached_md5) == 0:
+                    md5sum = get_file_md5(file_path, file_size, self.log)
+                    self.md5_cache.append({FILE_NAME_DEFAULT: info[FILE_NAME_DEFAULT], FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum})
+                else:
+                    md5sum = cached_md5[0]
                 if md5_info != md5sum:
                     invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
                     self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
@@ -145,9 +164,21 @@ class FileValidator:
                 continue
 
             self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: True, ERRORS: None})
-            
+        # save md5 cache to file
+        if not self.from_s3: 
+            self.save_md5_cache()
         return True
     
+    def save_md5_cache(self):
+        """
+        save md5 cache to file
+        """
+        with open(self.md5_cache_file, 'w') as f:
+            writer = csv.DictWriter(f, fieldnames=[FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT])
+            writer.writeheader()
+            for row in self.md5_cache:
+                writer.writerow(row)
+
     #public function to read pre-manifest and return list of file records 
     def read_manifest(self):
         files_info = []

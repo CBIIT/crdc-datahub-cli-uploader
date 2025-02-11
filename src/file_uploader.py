@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import csv
 from collections import deque
 from datetime import datetime
 from bento.common.utils import get_logger, get_md5
@@ -7,6 +8,7 @@ from common.constants import FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  OVERWRITE, D
     PRE_MANIFEST, S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH,FILE_SIZE_DEFAULT, MD5_DEFAULT, TEMP_DOWNLOAD_DIR
 from common.utils import extract_s3_info_from_url, format_size, calculate_eclipse_time, format_time
 from common.s3util import S3Bucket
+from common.md5_calculator import get_file_md5
 from copier import Copier
 
 # This script upload files and matadata files from local to specified S3 bucket
@@ -17,7 +19,7 @@ class FileUploader:
     TTL = 'ttl'
     INFO = 'file_info'
 
-    def __init__(self, configs, file_list):
+    def __init__(self, configs, file_list, md5_cache, md5_cache_file):
         """"
         :param configs: all configurations for file uploading
         :param file_list: list of file path, size
@@ -41,6 +43,8 @@ class FileUploader:
         self.files_processed = 0
         self.files_failed = 0
         self.total_file_volume = 0
+        self.md5_cache = md5_cache
+        self.md5_cache_file = md5_cache_file
 
     """
     Set s3 bucket, prefix and file dir for downloading if source file dir is s3 url.
@@ -72,7 +76,19 @@ class FileUploader:
             })
             if self.files_processed >= self.count:
                 break
+        if self.from_s3 == True:
+            self.save_md5_cache()
         return files
+    
+    def save_md5_cache(self):
+        """
+        save md5 cache to file
+        """
+        with open(self.md5_cache_file, 'w') as f:
+            writer = csv.DictWriter(f, fieldnames=[FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT])
+            writer.writeheader()
+            for row in self.md5_cache:
+                writer.writerow(row)
 
     # Use this method in solo mode
     def upload(self):
@@ -174,7 +190,13 @@ class FileUploader:
             self.log.error(invalid_reason)
             return False
         #calculate file md5
-        md5sum = get_md5(file_path)
+        # check if md5 is in cache by file name and file size
+        cached_md5 = [row[MD5_DEFAULT] for row in self.md5_cache if row[FILE_NAME_DEFAULT] == file_info[FILE_NAME_DEFAULT] and row[FILE_SIZE_DEFAULT] == file_size]
+        if not cached_md5 or len(cached_md5) == 0:
+            md5sum = get_file_md5(file_path, file_size, self.log)
+            self.md5_cache.append({FILE_NAME_DEFAULT: file_info[FILE_NAME_DEFAULT], FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum})
+        else:
+            md5sum = cached_md5[0]
         if md5_info != md5sum:
             invalid_reason = f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
             file_info[SUCCEEDED] = False
