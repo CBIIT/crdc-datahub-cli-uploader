@@ -8,7 +8,7 @@ import sys
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, FILE_ID_FIELD, TYPE_FILE
+    FILE_PATH, SKIPPED, FILE_ID_FIELD, TYPE_FILE, CLI_VERSION
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
@@ -21,7 +21,9 @@ if LOG_PREFIX not in os.environ:
 
 log = get_logger('FileLoader')
 # public function to received args and dispatch to different modules for different uploading types, file or metadata
-def controller():  
+def controller(): 
+    # print cli version
+    print(f"Version: {CLI_VERSION}") 
     #step 1: process args, configuration file
     config = Config()
     if not config.validate():
