@@ -32,7 +32,7 @@ jobs:
 
       - name: Build Windows binary & add configuration files and README.md
         run: |
-          pyinstaller --onefile --distpath dist/windows --name uploader.exe src/uploader.py
+          pyinstaller --distpath dist/windows --name uploader.exe src/uploader.py
           cp -R configs dist/windows
           cp README.md dist/windows
 
@@ -85,7 +85,7 @@ jobs:
         env:
           ARCHFLAGS: "-arch arm64"  # Ensures build for Apple Silicon
         run: |
-          pyinstaller --onefile --paths=src/bento --distpath dist/mac-arm --name uploader src/uploader.py
+          pyinstaller --paths=src/bento --distpath dist/mac-arm --name uploader src/uploader.py
           cp -R configs dist/mac-arm
           cp README.md dist/mac-arm
 
@@ -126,7 +126,7 @@ jobs:
 
       - name: Build macOS Intel binary & add configuration files and README.md
         run: |
-          pyinstaller --onefile --paths=src/bento --distpath dist/mac-x64 --name uploader src/uploader.py
+          pyinstaller --paths=src/bento --distpath dist/mac-x64 --name uploader src/uploader.py
           cp -R configs dist/mac-x64
           cp README.md dist/mac-x64
 
