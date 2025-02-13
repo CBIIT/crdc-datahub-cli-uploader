@@ -61,14 +61,18 @@ class S3Bucket:
     def put_file_obj(self, file_size, key, data, md5_base64):
         # Initialize the progress bar
         chunk_size = 1024 * 1024 if file_size >= 1024 * 1024 else file_size #chunk data for display progress for small metadata file < 4,500,000,000 bytes
-        # Upload the file in chunks
-        for chunk in iter(lambda: data.read(chunk_size), b''):
-            self.bucket.put_object(Key=key,
-                                   Body=chunk,
-                                   ContentMD5=md5_base64,
-                                   ACL= BUCKET_OWNER_ACL,
-                                   )
-
+        with ProgressPercentage(file_size) as progress:
+            try:
+                for chunk in iter(lambda: data.read(chunk_size), b''):
+                    self.bucket.put_object(
+                        Key=key,
+                        Body=chunk,
+                        ContentMD5=md5_base64,
+                        ACL=BUCKET_OWNER_ACL,
+                    )
+                    progress(len(chunk))  # Update progress
+            except Exception as e:
+                print(f"Upload failed: {e}")
 
     def upload_file_obj(self, file_size, key, data, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
         self.bucket.upload_fileobj(
