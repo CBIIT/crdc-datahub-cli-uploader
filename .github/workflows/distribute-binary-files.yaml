@@ -79,7 +79,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller  # Install pyinstaller
+          pip install --upgrade pyinstaller  # Install pyinstaller
 
       - name: Build macOS Apple Silicon binary & add configuration files and README.md
         env:
@@ -122,7 +122,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller  # Install pyinstaller
+          pip install --upgrade pyinstaller  # Install pyinstaller
 
       - name: Build macOS Intel binary & add configuration files and README.md
         run: |
