@@ -60,21 +60,22 @@ class S3Bucket:
 
     def put_file_obj(self, file_size, key, data, md5_base64):
         # Initialize the progress bar
-        progress = create_progress_bar(file_size)
+        # progress = create_progress_bar(file_size)
         chunk_size = 1024 * 1024 if file_size >= 1024 * 1024 else file_size #chunk data for display progress for small metadata file < 4,500,000,000 bytes
-        try:
-            # Upload the file in chunks
-            for chunk in iter(lambda: data.read(chunk_size), b''):
-                self.bucket.put_object(Key=key,
-                                        Body=chunk,
-                                        ContentMD5=md5_base64,
-                                        ACL= BUCKET_OWNER_ACL,
-                                        )
-                # Update the progress bar
-                progress.update(len(chunk))
-        finally:
-            # Close the progress bar
-            progress.close()
+        with ProgressPercentage(file_size) as progress:
+            try:
+                for chunk in iter(lambda: data.read(chunk_size), b''):
+                    self.bucket.put_object(
+                        Key=key,
+                        Body=chunk,
+                        ContentMD5=md5_base64,
+                        ACL=BUCKET_OWNER_ACL,
+                    )
+                    progress(len(chunk))  # Dynamically move progress bar
+
+            except Exception as e:
+                print(f"[red]Upload failed: {e}[/red]")
+
 
     def upload_file_obj(self, file_size, key, data, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
         self.bucket.upload_fileobj(
@@ -139,18 +140,36 @@ class S3Bucket:
 """
 S3 util class to display upload progress
 """
-class ProgressPercentage(object):
+from rich.progress import Progress, BarColumn, TaskProgressColumn, TimeRemainingColumn, TransferSpeedColumn
+
+class ProgressPercentage:
     def __init__(self, file_size):
         self._size = file_size
         self._seen_so_far = 0
-        self._progress = create_progress_bar(file_size)
+        self.progress = Progress(
+            "{task.fields[status]}",  # ✅ Dynamic status update
+            BarColumn(),
+            TaskProgressColumn(),
+            TransferSpeedColumn(),
+            "[yellow]{task.completed}B/{task.total}B",
+            TimeRemainingColumn(),
+        )
+        self.task = None
+
+    def __enter__(self):
+        self.progress.start()
+        self.task = self.progress.add_task("[cyan]Uploading...[/cyan]", total=self._size, status="[cyan]Uploading...[/cyan]")
+        return self
 
     def __call__(self, bytes_amount):
         self._seen_so_far += bytes_amount
-        self._progress.update(bytes_amount)
+        self.progress.update(self.task, advance=bytes_amount)
 
-    def __del__(self):
-        self._progress.close() 
+    def __exit__(self, exc_type, exc_value, traceback):
+        # ✅ Change progress bar title to "Uploaded!" when done
+        self.progress.update(self.task, completed=self._size, status="[green]Uploaded![/green]")
+        self.progress.stop()
+
 
 def create_progress_bar(file_size):
     progress_bar = tqdm(total= file_size, unit='B', unit_scale=True, desc="Progress", smoothing=0.0,
