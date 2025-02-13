@@ -69,6 +69,7 @@ class S3Bucket:
                                    ACL= BUCKET_OWNER_ACL,
                                    )
 
+
     def upload_file_obj(self, file_size, key, data, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
         self.bucket.upload_fileobj(
             data, key, ExtraArgs=extra_args, Config=config,
