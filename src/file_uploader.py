@@ -110,7 +110,7 @@ class FileUploader:
                 uploaded_file_volume += file_info[FILE_SIZE_DEFAULT]
                 
                 # self.log.info(f'{self.copier.files_copied} out of {len(self.file_info_list)} files have been uploaded to destination.')
-                self.print_progress_message(self.count, self.copier.files_copied, self.total_file_volume, uploaded_file_volume, start_uploading_at)
+                # self.print_progress_message(self.count, self.copier.files_copied, self.total_file_volume, uploaded_file_volume, start_uploading_at)
                    
             self.log.info(f'Files processed: {self.files_processed}')
             self.log.info(f'Files not found: {len(self.copier.files_not_found)}')
