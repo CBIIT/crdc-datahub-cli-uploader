@@ -60,8 +60,8 @@ class S3Bucket:
 
     def put_file_obj(self, file_size, key, data, md5_base64):
         # Initialize the progress bar
-        #progress = create_progress_bar(file_size)
         chunk_size = 1024 * 1024 if file_size >= 1024 * 1024 else file_size #chunk data for display progress for small metadata file < 4,500,000,000 bytes
+        # Upload the file in chunks
         for chunk in iter(lambda: data.read(chunk_size), b''):
             self.bucket.put_object(Key=key,
                                    Body=chunk,
@@ -72,7 +72,7 @@ class S3Bucket:
     def upload_file_obj(self, file_size, key, data, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
         self.bucket.upload_fileobj(
             data, key, ExtraArgs=extra_args, Config=config,
-
+            Callback=ProgressPercentage(file_size)
         )
 
     def get_object_size(self, key):
@@ -103,7 +103,7 @@ class S3Bucket:
         try:
             file_size, msg = self.get_object_size(key)
             self.bucket.download_file(key, local_file_path,
-                                      )
+                                      Callback=ProgressPercentage(file_size))
             return True, None
         except ClientError as ce:
             msg = None
@@ -136,14 +136,24 @@ class ProgressPercentage(object):
     def __init__(self, file_size):
         self._size = file_size
         self._seen_so_far = 0
-        self._progress = create_progress_bar(file_size)
+        self._progress = None
+        # self._progress = create_progress_bar(file_size)
+
+    def __enter__(self):
+        self._progress = tqdm(
+            total=self._size, unit='B', unit_scale=True, desc="Progress", smoothing=0.0,
+            bar_format="{l_bar}\033[1;32m{bar}\033[0m| {n_fmt}/{total_fmt} [elapsed: {elapsed} | remaining: {remaining}, {rate_fmt}]"
+        )
+        return self
 
     def __call__(self, bytes_amount):
         self._seen_so_far += bytes_amount
-        self._progress.update(bytes_amount)
+        if self._progress:
+            self._progress.update(bytes_amount)
 
-    def __del__(self):
-        self._progress.close() 
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._progress:
+            self._progress.close()
 
 def create_progress_bar(file_size):
     progress_bar = tqdm(total= file_size, unit='B', unit_scale=True, desc="Progress", smoothing=0.0,
