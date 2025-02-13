@@ -2,7 +2,7 @@
 import os
 import boto3
 from boto3.s3.transfer import TransferConfig, S3Transfer
-from tqdm import tqdm  # For progress bar
+# from tqdm import tqdm  # For progress bar
 from botocore.exceptions import ClientError
 
 from bento.common.utils import get_logger
@@ -171,9 +171,9 @@ class ProgressPercentage:
         self.progress.stop()
 
 
-def create_progress_bar(file_size):
-    progress_bar = tqdm(total= file_size, unit='B', unit_scale=True, desc="Progress", smoothing=0.0,
-                              bar_format="{l_bar}\033[1;32m{bar}\033[0m| {n_fmt}/{total_fmt} [elapsed: {elapsed} | remaining: {remaining}, {rate_fmt}]")
-    return progress_bar
+# def create_progress_bar(file_size):
+#     progress_bar = tqdm(total= file_size, unit='B', unit_scale=True, desc="Progress", smoothing=0.0,
+#                               bar_format="{l_bar}\033[1;32m{bar}\033[0m| {n_fmt}/{total_fmt} [elapsed: {elapsed} | remaining: {remaining}, {rate_fmt}]")
+#     return progress_bar
         
 
