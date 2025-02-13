@@ -52,3 +52,5 @@ SESSION_TOKEN = "sessionToken"
 S3_START= "s3://"
 FROM_S3 = "from_s3"
 TEMP_DOWNLOAD_DIR = "tmp/download"
+
+CLI_VERSION = "3.2"
