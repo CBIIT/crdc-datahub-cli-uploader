@@ -72,6 +72,7 @@ class S3Bucket:
                     )
                     progress(len(chunk))  # Update progress
             finally:
+                tqdm._instances.clear()
                 progress._progress.close()
                 if hasattr(data, "close"):
                     data.close()
