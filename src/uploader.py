@@ -4,7 +4,7 @@
 #############################
 import os
 import sys
-
+import multiprocessing
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
@@ -127,4 +127,5 @@ def controller():
         log.exception(f"Failed to dump uploading report files: {get_exception_msg()}.")
         log.info(f"Failed to dump uploading report files: {get_exception_msg()}.")
 if __name__ == '__main__':
+    multiprocessing.set_start_method("spawn")
     controller()
