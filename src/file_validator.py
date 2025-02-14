@@ -4,7 +4,7 @@ import os
 import glob
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, MD5_CACHE_CSV_HEADERS
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url, dump_data_to_csv
@@ -126,8 +126,8 @@ class FileValidator:
 
             self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: True, ERRORS: None})
         # save md5 cache to file
-        if not self.from_s3: 
-            dump_data_to_csv(self.md5_cache, self.md5_cache_file, MD5_CACHE_CSV_HEADERS)
+        if not self.from_s3:
+            dump_data_to_csv(self.md5_cache, self.md5_cache_file)
         return True
     
     #public function to read pre-manifest and return list of file records 
@@ -272,7 +272,7 @@ def get_file_md5(file_path, md5_cache, file_size, log):
     file_modified_at = os.path.getmtime(file_path)
     # check if md5 is in cache by file name and file size
     cached_md5 = [row[MD5_DEFAULT] for row in md5_cache if row[FILE_PATH] == file_path and row[FILE_SIZE_DEFAULT] == str(file_size) and 
-                    row[MODIFIED_AT] == file_modified_at]
+                    row[MODIFIED_AT] == str(file_modified_at)]
     if not cached_md5 or len(cached_md5) == 0:
          #calculate file md5
         md5sum = calculate_file_md5(file_path, file_size, log)

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 import os
-import csv
 from collections import deque
 from datetime import datetime
 from bento.common.utils import get_logger
 from common.constants import FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  OVERWRITE, DRY_RUN,\
-    S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH,FILE_SIZE_DEFAULT, MD5_DEFAULT, MD5_CACHE_CSV_HEADERS
-from common.utils import extract_s3_info_from_url, format_size, format_time, dump_data_to_csv
+    S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH,FILE_SIZE_DEFAULT, MD5_DEFAULT
+from common.utils import extract_s3_info_from_url, format_size, format_time
 from common.s3util import S3Bucket
 from copier import Copier
-from file_validator import get_file_md5
+from common.md5_calculator import calculate_file_md5
 
 # This script upload files and matadata files from local to specified S3 bucket
 # input: file info list
@@ -76,8 +75,7 @@ class FileUploader:
             })
             if self.files_processed >= self.count:
                 break
-        if self.from_s3 == True:
-            dump_data_to_csv(self.md5_cache, self.md5_cache_file, MD5_CACHE_CSV_HEADERS)
+
         return files
 
     # Use this method in solo mode
@@ -180,7 +178,7 @@ class FileUploader:
             self.log.error(invalid_reason)
             return False
 
-        md5sum = md5sum = get_file_md5(file_path, self.md5_cache, file_size, self.log)
+        md5sum = calculate_file_md5(file_path, file_size, self.log)
         if md5_info != md5sum:
             invalid_reason = f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
             file_info[SUCCEEDED] = False
@@ -197,8 +195,9 @@ class FileUploader:
         :return: None
         """
         file_path = file_info[FILE_PATH]
+        file_key = os.path.join(self.from_prefix, file_info[FILE_NAME_DEFAULT])
         self.log.info(f"Downloading {file_info[FILE_NAME_DEFAULT]} from {self.file_dir} ...")
-        result, msg = self.s3_bucket.download_object(os.path.join(self.from_prefix, file_info[FILE_NAME_DEFAULT]), file_path)
+        result, msg = self.s3_bucket.download_object(file_key, file_path)
         if not result:
             invalid_reason = msg
             file_info[SUCCEEDED] = False

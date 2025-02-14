@@ -126,10 +126,9 @@ class S3Bucket:
                 self.log.exception(e)
                 return False, msg  
         except Exception as e:
-            # 
             msg = f'Unknown error!'
             self.log.error(e)
-            return False,
+            return False, msg
         
     def close(self):
         self.client.close()
