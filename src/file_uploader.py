@@ -2,12 +2,13 @@
 import os
 from collections import deque
 from datetime import datetime
-from bento.common.utils import get_logger, get_md5
+from bento.common.utils import get_logger
 from common.constants import FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  OVERWRITE, DRY_RUN,\
-    PRE_MANIFEST, S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH,FILE_SIZE_DEFAULT, MD5_DEFAULT, TEMP_DOWNLOAD_DIR
-from common.utils import extract_s3_info_from_url, format_size, calculate_eclipse_time, format_time
+    S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH,FILE_SIZE_DEFAULT, MD5_DEFAULT
+from common.utils import extract_s3_info_from_url, format_size, format_time
 from common.s3util import S3Bucket
 from copier import Copier
+from common.md5_calculator import calculate_file_md5
 
 # This script upload files and matadata files from local to specified S3 bucket
 # input: file info list
@@ -17,7 +18,7 @@ class FileUploader:
     TTL = 'ttl'
     INFO = 'file_info'
 
-    def __init__(self, configs, file_list):
+    def __init__(self, configs, file_list, md5_cache, md5_cache_file):
         """"
         :param configs: all configurations for file uploading
         :param file_list: list of file path, size
@@ -41,6 +42,8 @@ class FileUploader:
         self.files_processed = 0
         self.files_failed = 0
         self.total_file_volume = 0
+        self.md5_cache = md5_cache
+        self.md5_cache_file = md5_cache_file
 
     """
     Set s3 bucket, prefix and file dir for downloading if source file dir is s3 url.
@@ -72,6 +75,7 @@ class FileUploader:
             })
             if self.files_processed >= self.count:
                 break
+
         return files
 
     # Use this method in solo mode
@@ -173,8 +177,8 @@ class FileUploader:
             file_info[ERRORS] = [invalid_reason]
             self.log.error(invalid_reason)
             return False
-        #calculate file md5
-        md5sum = get_md5(file_path)
+
+        md5sum = calculate_file_md5(file_path, file_size, self.log)
         if md5_info != md5sum:
             invalid_reason = f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
             file_info[SUCCEEDED] = False
@@ -191,8 +195,9 @@ class FileUploader:
         :return: None
         """
         file_path = file_info[FILE_PATH]
+        file_key = os.path.join(self.from_prefix, file_info[FILE_NAME_DEFAULT])
         self.log.info(f"Downloading {file_info[FILE_NAME_DEFAULT]} from {self.file_dir} ...")
-        result, msg = self.s3_bucket.download_object(os.path.join(self.from_prefix, file_info[FILE_NAME_DEFAULT]), file_path)
+        result, msg = self.s3_bucket.download_object(file_key, file_path)
         if not result:
             invalid_reason = msg
             file_info[SUCCEEDED] = False

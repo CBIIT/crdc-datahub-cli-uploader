@@ -4,11 +4,12 @@ import os
 import glob
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
-from bento.common.utils import get_logger, get_md5
-from common.utils import extract_s3_info_from_url
+from bento.common.utils import get_logger
+from common.utils import extract_s3_info_from_url, dump_data_to_csv
 from common.s3util import S3Bucket
+from common.md5_calculator import calculate_file_md5
 
 
 """ Requirement for the ticket crdcdh-343
@@ -34,6 +35,8 @@ class FileValidator:
         self.from_bucket_name = None
         self.from_prefix = None
         self.s3_bucket = None
+        self.md5_cache_file = os.path.join(MD5_CACHE_DIR, MD5_CACHE_FILE)
+        self.md5_cache = self.load_md5_cache() 
 
     def validate(self):
         # check file dir
@@ -82,6 +85,7 @@ class FileValidator:
             self.s3_bucket = S3Bucket()
             self.s3_bucket.set_s3_client(self.from_bucket_name, None)
         line_num = 1
+        self.log.info(f'Start to validate data files...')
         for info in self.files_info:
             line_num += 1
             invalid_reason = ""
@@ -91,33 +95,9 @@ class FileValidator:
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
             if not self.from_s3: # only validate local data file
-                if not os.path.isfile(file_path):
-                    invalid_reason += f"File {file_path} does not exist!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+                result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
+                if not result:
                     self.invalid_count += 1
-                    self.log.error(invalid_reason)
-                    continue
-                file_size = os.path.getsize(file_path)
-                if file_size != size_info:
-                    invalid_reason += f"Real file size {file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {info[FILE_SIZE_DEFAULT]}!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: invalid_reason})
-                    self.invalid_count += 1
-                    self.log.error(invalid_reason)
-                    continue
-                md5_info = info[MD5_DEFAULT] 
-                if not md5_info:
-                    invalid_reason += f"MD5 of {info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
-                    self.invalid_count += 1
-                    self.log.error(invalid_reason)
-                    continue
-                #calculate file md5
-                md5sum = get_md5(file_path)
-                if md5_info != md5sum:
-                    invalid_reason += f"Real file md5 {md5sum} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
-                    self.invalid_count += 1
-                    self.log.error(invalid_reason)
                     continue
             else: # check file existing and validate file size in s3 bucket
                 s3_file_size, msg = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
@@ -133,8 +113,8 @@ class FileValidator:
                     self.invalid_count += 1
                     self.log.error(invalid_reason)
                     continue
-                file_size = size_info
-                md5sum = info[MD5_DEFAULT]
+            file_size = size_info
+            md5sum = info[MD5_DEFAULT]
             # validate file id
             result, msg = self.validate_file_id(file_id, line_num)
             if not result:
@@ -145,7 +125,9 @@ class FileValidator:
                 continue
 
             self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: True, ERRORS: None})
-            
+        # save md5 cache to file
+        if not self.from_s3:
+            dump_data_to_csv(self.md5_cache, self.md5_cache_file)
         return True
     
     #public function to read pre-manifest and return list of file records 
@@ -232,3 +214,70 @@ class FileValidator:
                 return False, msg
                 
         return True, None
+    
+    def load_md5_cache(self):
+        # retrieve cached md5 info
+        # check if md5 cache dir exists
+        os.makedirs(MD5_CACHE_DIR, exist_ok=True)
+        if os.path.isfile(self.md5_cache_file):
+            # read md5 cache file to dict
+            with open(self.md5_cache_file) as f:
+                reader = csv.DictReader(f)
+                return [row for row in reader]  
+        else: 
+            return []
+    
+
+"""
+Validate file size and md5
+:param file_info: file_info
+:param size_info: size_info
+:param file_path: file_path
+:param fileList: fileList
+:param md5_cache: md5_cache
+:param invalid_reason: invalid_reason
+:param log: log
+:return: True if valid, False otherwise
+"""
+def validate_data_file(file_info, file_id, size_info, file_path, fileList, md5_cache, invalid_reason, log):
+    if not os.path.isfile(file_path):
+        invalid_reason += f"File {file_path} does not exist!"
+        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+        log.error(invalid_reason)
+        return False
+    file_size = os.path.getsize(file_path)
+    if file_size != size_info:
+        invalid_reason += f"Real file size {file_size} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {file_info[FILE_SIZE_DEFAULT]}!"
+        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: invalid_reason})
+        log.error(invalid_reason)
+        return False
+    md5_info = file_info[MD5_DEFAULT] 
+    if not md5_info:
+        invalid_reason += f"MD5 of {file_info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
+        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+        log.error(invalid_reason)
+        return False
+    md5sum = get_file_md5(file_path, md5_cache, file_size, log)
+    if md5_info != md5sum:
+        invalid_reason += f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
+        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
+        log.error(invalid_reason)
+        return False
+    return True
+
+def get_file_md5(file_path, md5_cache, file_size, log):
+    """
+    retrieve md5 if existing cached value, otherwise calculate md5 for the file and save to md5 cache
+    """
+    file_modified_at = os.path.getmtime(file_path)
+    # check if md5 is in cache by file name and file size
+    cached_md5 = [row[MD5_DEFAULT] for row in md5_cache if row[FILE_PATH] == file_path and row[FILE_SIZE_DEFAULT] == str(file_size) and 
+                    row[MODIFIED_AT] == str(file_modified_at)]
+    if not cached_md5 or len(cached_md5) == 0:
+         #calculate file md5
+        md5sum = calculate_file_md5(file_path, file_size, log)
+        md5_cache.append({FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, MODIFIED_AT: file_modified_at})
+    else:
+        md5sum = cached_md5[0]
+
+    return md5sum

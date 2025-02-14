@@ -1,10 +1,11 @@
 
 import sys
 import csv
+import boto3
 from uuid import UUID
 from datetime import datetime
 from common.constants import S3_START
-import os
+
 
 """ 
 clean_up_key_value(dict)
@@ -142,6 +143,20 @@ def format_time(seconds):
     minutes = int(remaining_seconds // 60)
     seconds = int(remaining_seconds % 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+def dump_data_to_csv(dict_list, file_path):
+    """
+    save md5 cache to file
+    """
+    if not dict_list or len(dict_list) == 0:
+        return 
+
+    with open(file_path, 'w') as f:
+        writer = csv.DictWriter(f, fieldnames=dict_list[0].keys())
+        writer.writeheader()
+        for row in dict_list:
+            writer.writerow(row)
+
                            
     
 

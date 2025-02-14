@@ -52,6 +52,7 @@ def controller():
         log.error("Failed to upload files: found invalid file(s)!")
         log.info("Failed to upload files: found invalid file(s)!  Please check log file in tmp folder for details.")
         return 1
+    
     file_list = validator.fileList
 
     if validator.invalid_count == 0:
@@ -85,7 +86,7 @@ def controller():
             temp_credential = apiInvoker.cred
             configs[TEMP_CREDENTIAL] = temp_credential
             #step 5: upload all files to designated s3 bucket
-            loader = FileUploader(configs, file_list)
+            loader = FileUploader(configs, file_list, validator.md5_cache, validator.md5_cache_file)
             try:
                 result = loader.upload()
                 if not result:
@@ -97,6 +98,8 @@ def controller():
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
                         process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)
+                # dump md5 cache to file
+
             except KeyboardInterrupt:
                 log.info('File uploading is interrupted.')
             finally: 
