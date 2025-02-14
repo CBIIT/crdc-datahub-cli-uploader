@@ -5,7 +5,7 @@ from common.progress_bar import create_progress_bar
 DEFAULT_CHUNK_SIZE = 1024*10  # Default chunk size for small files
 LARGE_FILE_CHUNK_SIZE = 1024*1024  # 64 KB chunk size for large files
 
-def get_file_md5(file_path, file_size, log):
+def calculate_file_md5(file_path, file_size, log):
     """
     Calculate the MD5 checksum of a file.
     Dynamically adjusts chunk size based on file size.

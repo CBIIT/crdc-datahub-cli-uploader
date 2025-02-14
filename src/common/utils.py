@@ -142,6 +142,16 @@ def format_time(seconds):
     minutes = int(remaining_seconds // 60)
     seconds = int(remaining_seconds % 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+def dump_data_to_csv(dict_list, file_path, column_list):
+        """
+        save md5 cache to file
+        """
+        with open(file_path, 'w') as f:
+            writer = csv.DictWriter(f, fieldnames=column_list)
+            writer.writeheader()
+            for row in dict_list:
+                writer.writerow(row)
                            
     
 
