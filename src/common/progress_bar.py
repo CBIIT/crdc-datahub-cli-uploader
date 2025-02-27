@@ -3,18 +3,19 @@ from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, 
 """
 class to display progress
 """
-class ProgressPercentage(object):
+class ProgressPercentage:
     def __init__(self, file_size):
         self._size = file_size
         self._seen_so_far = 0
-        self._progress = create_progress_bar(file_size)
+        self._progress, self._task = create_progress_bar(file_size)  # Ensure task is stored
 
     def __call__(self, bytes_amount):
         self._seen_so_far += bytes_amount
-        self._progress.update(bytes_amount)
+        self._progress.update(self._task, advance=bytes_amount)  # Properly update progress
+        self._progress.refresh()  # Force update to make sure it appears
 
     def __del__(self):
-        self._progress.close() 
+        self._progress.stop()  # Properly stop progress bar
 
 def create_progress_bar(file_size):
     # progress_bar = tqdm(total= file_size, unit='B', unit_scale=True, desc="Progress", smoothing=0.0,

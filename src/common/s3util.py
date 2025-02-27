@@ -64,18 +64,29 @@ class S3Bucket:
         progress, task = create_progress_bar(file_size)
         chunk_size = 1024 * 1024 if file_size >= 1024 * 1024 else file_size #chunk data for display progress for small metadata file < 4,500,000,000 bytes
 
-        downloaded_bytes = 0
+        uploaded_bytes = 0
         with progress:
-            while downloaded_bytes < file_size:
-                downloaded_bytes += chunk_size  # Update with your actual download logic
-                progress.update(task, advance=chunk_size)
+            while uploaded_bytes < file_size:
+                chunk = data.read(chunk_size)
+                if not chunk:
+                    break  # Stop if there’s nothing left to read
+
+                self.bucket.put_object(
+                    Key=key,
+                    Body=chunk,
+                    ContentMD5=md5_base64,
+                    ACL=BUCKET_OWNER_ACL,
+                )
+
+                uploaded_bytes += len(chunk)  # Track uploaded bytes
+                progress.update(task, advance=len(chunk))
 
 
 
     def upload_file_obj(self, file_size, key, data, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
+        progress_callback = ProgressPercentage(file_size)  # Initialize progress
         self.bucket.upload_fileobj(
-            data, key, ExtraArgs=extra_args, Config=config,
-            Callback=ProgressPercentage(file_size)
+            data, key, ExtraArgs=extra_args, Config=config, Callback=progress_callback
         )
 
     def get_object_size(self, key):
