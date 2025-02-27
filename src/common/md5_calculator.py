@@ -20,7 +20,8 @@ def calculate_file_md5(file_path, file_size, log):
     else:
         chunk_size = DEFAULT_CHUNK_SIZE if file_size > DEFAULT_CHUNK_SIZE else file_size
     log.info(f'Start to calculate md5 of the data file, {file_path}...')
-    progress, task = create_progress_bar(file_size)
+    progress = create_progress_bar(file_size)
+    task = progress.add_task("Calculating md5", total=file_size)
     # progress = create_progress_bar(file_size)
     try:
         with open(file_path, 'rb') as f:

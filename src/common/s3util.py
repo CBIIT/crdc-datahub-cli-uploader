@@ -4,13 +4,31 @@ import boto3
 # from boto3.s3.transfer import TransferConfig, S3Transfer
 
 from botocore.exceptions import ClientError
-
+from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
 from bento.common.utils import get_logger
 from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN
 from common.progress_bar import ProgressPercentage, create_progress_bar
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
 SINGLE_PUT_LIMIT = 4_500_000_000
+
+
+class ProgressFileWrapper:
+    def __init__(self, file_obj, progress, task_id):
+        self._file = file_obj
+        self._progress = progress
+        self._task_id = task_id
+        self._read_bytes = 0
+
+    def read(self, size):
+        data = self._file.read(size)
+        if data:
+            self._read_bytes += len(data)
+            self._progress.update(self._task_id, completed=self._read_bytes)
+        return data
+
+    def __getattr__(self, name):
+        return getattr(self._file, name)
 
 class S3Bucket:
     def __init__(self):
@@ -61,7 +79,8 @@ class S3Bucket:
 
     def put_file_obj(self, file_size, key, data, md5_base64):
         # Initialize the progress bar
-        progress, task = create_progress_bar(file_size)
+        progress = create_progress_bar(file_size)
+        task = progress.add_task("uploading task", total=file_size)
         chunk_size = 1024 * 1024 if file_size >= 1024 * 1024 else file_size #chunk data for display progress for small metadata file < 4,500,000,000 bytes
 
         uploaded_bytes = 0
@@ -77,17 +96,15 @@ class S3Bucket:
                     ContentMD5=md5_base64,
                     ACL=BUCKET_OWNER_ACL,
                 )
-
                 uploaded_bytes += len(chunk)  # Track uploaded bytes
                 progress.update(task, advance=len(chunk))
 
 
 
-    def upload_file_obj(self, file_size, key, data, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
-        progress_callback = ProgressPercentage(file_size)  # Initialize progress
+    def upload_file_obj(self, stream, key, progress_callback, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
+        print("tesetsetset....")
         self.bucket.upload_fileobj(
-            data, key, ExtraArgs=extra_args, Config=config, Callback=progress_callback
-        )
+            stream, key, ExtraArgs=extra_args, Config=config, Callback=progress_callback)
 
     def get_object_size(self, key):
         try:

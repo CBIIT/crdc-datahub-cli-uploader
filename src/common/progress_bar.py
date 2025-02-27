@@ -23,7 +23,7 @@ def create_progress_bar(file_size):
     # return progress_bar
     progress = Progress(
         TextColumn("Progress:"),
-        BarColumn(bar_width=None, style="green"),
+        BarColumn(bar_width=50, style="green"),
         TextColumn("[bold green]{task.percentage:>3.0f}%"),
         TextColumn("| {task.completed}/{task.total}"),
         TimeElapsedColumn(),
@@ -31,5 +31,5 @@ def create_progress_bar(file_size):
         TransferSpeedColumn()
     )
 
-    task = progress.add_task("Downloading", total=file_size)
-    return progress, task
+    # task = progress.add_task("Downloading", total=file_size)
+    return progress
