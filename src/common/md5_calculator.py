@@ -20,16 +20,17 @@ def calculate_file_md5(file_path, file_size, log):
     else:
         chunk_size = DEFAULT_CHUNK_SIZE if file_size > DEFAULT_CHUNK_SIZE else file_size
     log.info(f'Start to calculate md5 of the data file, {file_path}...')
-    progress = create_progress_bar(file_size)
-    task = progress.add_task("Calculating md5", total=file_size)
     try:
-        with open(file_path, 'rb') as f:
-            while chunk := f.read(chunk_size):
+        with open(file_path, 'rb') as f, create_progress_bar() as progress:
+            task = progress.add_task("Calculating MD5", total=file_size)
+            while True:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
                 md5_hash.update(chunk)
                 progress.update(task, advance=len(chunk))
+            progress.update(task, completed=file_size)
+
     except Exception as e:
         print(f"An error occurred: {e}")
-    finally:
-            # Close the progress bar
-            progress.stop()
     return md5_hash.hexdigest()

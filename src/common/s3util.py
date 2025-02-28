@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 
 from bento.common.utils import get_logger
 from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN
-from common.progress_bar import ProgressPercentage, create_progress_bar
+from common.progress_bar import ProgressPercentage, create_progress_bar, ProgressCallback
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
 SINGLE_PUT_LIMIT = 4_500_000_000
@@ -117,9 +117,12 @@ class S3Bucket:
     
     def download_object(self, key, local_file_path):
         try:
-            file_size, msg = self.get_object_size(key)
-            self.bucket.download_file(key, local_file_path,
-                                      Callback=ProgressPercentage(file_size))
+            with create_progress_bar() as progress:
+                file_size, msg = self.get_object_size(key)
+                task_id = progress.add_task("Downloading object...", total=file_size)
+                progress_callback = ProgressCallback(file_size, progress, task_id)
+                self.bucket.download_file(key, local_file_path,
+                                          Callback=progress_callback)
             return True, None
         except ClientError as ce:
             msg = None
