@@ -12,7 +12,6 @@ class ProgressPercentage:
     def __call__(self, bytes_amount):
         self._seen_so_far += bytes_amount
         self._progress.update(self._task, advance=bytes_amount)  # Properly update progress
-        self._progress.refresh()  # Force update to make sure it appears
 
     def __del__(self):
         self._progress.stop()  # Properly stop progress bar

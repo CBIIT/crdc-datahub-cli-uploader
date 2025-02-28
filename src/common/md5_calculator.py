@@ -29,4 +29,7 @@ def calculate_file_md5(file_path, file_size, log):
                 progress.update(task, advance=len(chunk))
     except Exception as e:
         print(f"An error occurred: {e}")
+    finally:
+            # Close the progress bar
+            progress.stop()
     return md5_hash.hexdigest()
