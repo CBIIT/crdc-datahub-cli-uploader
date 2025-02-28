@@ -38,7 +38,7 @@ def create_progress_bar():
         TimeElapsedColumn(),
         TextColumn("Elapsed:"),
         TimeRemainingColumn(),
-        TextColumn("Remaining: [yellow]{task.time_remaining}"),
+        TextColumn("Remaining:"),
         TransferSpeedColumn(),
         refresh_per_second=30
     )
