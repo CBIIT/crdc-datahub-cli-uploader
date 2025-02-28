@@ -85,6 +85,7 @@ class FileValidator:
             self.s3_bucket = S3Bucket()
             self.s3_bucket.set_s3_client(self.from_bucket_name, None)
         line_num = 1
+        total_file_cnt = len(self.files_info)
         self.log.info(f'Start to validate data files...')
         for info in self.files_info:
             line_num += 1
@@ -96,6 +97,8 @@ class FileValidator:
             file_id = info.get(FILE_ID_DEFAULT)
             if not self.from_s3: # only validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
+                self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
+                self.log.info(f'{line_num - 1} out of {total_file_cnt} file(s) are validated.')
                 if not result:
                     self.invalid_count += 1
                     continue
@@ -128,6 +131,7 @@ class FileValidator:
         # save md5 cache to file
         if not self.from_s3:
             dump_data_to_csv(self.md5_cache, self.md5_cache_file)
+        "Validating file integrity succeeded"
         return True
     
     #public function to read pre-manifest and return list of file records 
