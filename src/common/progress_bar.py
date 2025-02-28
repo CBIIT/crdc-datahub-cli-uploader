@@ -1,5 +1,6 @@
 from tqdm import tqdm  # For progress bar
-from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, TimeElapsedColumn, TransferSpeedColumn
+from rich.progress import (Progress, BarColumn, TextColumn, TimeRemainingColumn, TimeElapsedColumn, TransferSpeedColumn,
+                           DownloadColumn)
 """
 class to display progress
 """
@@ -33,10 +34,11 @@ def create_progress_bar():
         TextColumn("Progress:"),
         BarColumn(bar_width=80, style="grey50", complete_style="green"),
         TextColumn("[bold green]{task.percentage:>3.0f}%"),
-        TextColumn("| {task.completed}/{task.total}"),
+        DownloadColumn(),
         TimeElapsedColumn(),
         TextColumn("Elapsed:"),
         TimeRemainingColumn(),
         TextColumn("Remaining: [yellow]{task.time_remaining}"),
-        TransferSpeedColumn()
+        TransferSpeedColumn(),
+        refresh_per_second=30
     )
