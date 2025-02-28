@@ -31,7 +31,7 @@ class ProgressCallback:
 def create_progress_bar():
     return Progress(
         TextColumn("Progress:"),
-        BarColumn(bar_width=80, style="green"),
+        BarColumn(bar_width=80, style="grey50", complete_style="green"),
         TextColumn("[bold green]{task.percentage:>3.0f}%"),
         TextColumn("| {task.completed}/{task.total}"),
         TimeElapsedColumn(),
