@@ -4,24 +4,12 @@ from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, 
 from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, get_md5_hex_n_base64
-
+from common.progress_bar import create_progress_bar, ProgressCallback
 from common.graphql_client import APIInvoker
 from common.s3util import S3Bucket
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, \
     ERRORS, SKIPPED
 from common.utils import get_exception_msg
-
-class ProgressCallback:
-    def __init__(self, file_size, progress, task_id):
-        self.file_size = file_size
-        self.progress = progress
-        self.task_id = task_id
-        self.bytes_transferred = 0
-
-    def __call__(self, bytes_amount):
-        """Update the progress bar based on bytes uploaded."""
-        self.bytes_transferred += bytes_amount
-        self.progress.update(self.task_id, completed=self.bytes_transferred)
 
 class Copier:
 
@@ -149,11 +137,7 @@ class Copier:
             chunk_size = self.MULTI_PART_CHUNK_SIZE if parts < self.PARTS_LIMIT else int(org_size) // self.PARTS_LIMIT
             t_config = TransferConfig(multipart_threshold=self.MULTI_PART_THRESHOLD,
                                         multipart_chunksize=chunk_size)
-            with open(org_url, 'rb') as stream, Progress(
-                    BarColumn(bar_width=None, style="green"),
-                    TextColumn("[bold green]{task.percentage:>3.0f}%"),
-                    TextColumn("| {task.completed}/{task.total}"),
-            ) as progress:
+            with open(org_url, 'rb') as stream, create_progress_bar() as progress:
                 task_id = progress.add_task("Uploading...", total=org_size)
                 progress_callback = ProgressCallback(org_size, progress, task_id)
                 self.bucket.upload_file_obj(stream, key, progress_callback, t_config)

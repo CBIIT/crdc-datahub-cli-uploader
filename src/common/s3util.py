@@ -79,7 +79,7 @@ class S3Bucket:
 
     def put_file_obj(self, file_size, key, data, md5_base64):
         # Initialize the progress bar
-        progress = create_progress_bar(file_size)
+        progress = create_progress_bar()
         task = progress.add_task("uploading task", total=file_size)
         chunk_size = 1024 * 1024 if file_size >= 1024 * 1024 else file_size #chunk data for display progress for small metadata file < 4,500,000,000 bytes
 
@@ -102,7 +102,6 @@ class S3Bucket:
 
 
     def upload_file_obj(self, stream, key, progress_callback, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
-        print("tesetsetset....")
         self.bucket.upload_fileobj(
             stream, key, ExtraArgs=extra_args, Config=config, Callback=progress_callback)
 
