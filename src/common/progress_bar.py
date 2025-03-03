@@ -35,10 +35,9 @@ def create_progress_bar():
         BarColumn(bar_width=80, style="grey50", complete_style="green"),
         TextColumn("[bold green]{task.percentage:>3.0f}%"),
         DownloadColumn(),
-        TimeElapsedColumn(),
         TextColumn("Elapsed:"),
-        TimeRemainingColumn(),
+        TimeElapsedColumn(),
         TextColumn("Remaining:"),
-        TransferSpeedColumn(),
-        refresh_per_second=30
+        TimeRemainingColumn(),
+        TransferSpeedColumn()
     )
