@@ -1,21 +1,5 @@
-from tqdm import tqdm  # For progress bar
 from rich.progress import (Progress, BarColumn, TextColumn, TimeRemainingColumn, TimeElapsedColumn, TransferSpeedColumn,
                            DownloadColumn)
-"""
-class to display progress
-"""
-class ProgressPercentage:
-    def __init__(self, file_size):
-        self._size = file_size
-        self._seen_so_far = 0
-        self._progress, self._task = create_progress_bar()  # Ensure task is stored
-
-    def __call__(self, bytes_amount):
-        self._seen_so_far += bytes_amount
-        self._progress.update(self._task, advance=bytes_amount)  # Properly update progress
-
-    def __del__(self):
-        self._progress.stop()  # Properly stop progress bar
 
 class ProgressCallback:
     def __init__(self, file_size, progress, task_id):

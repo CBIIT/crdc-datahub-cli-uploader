@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 
 from bento.common.utils import get_logger
 from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN
-from common.progress_bar import ProgressPercentage, create_progress_bar, ProgressCallback
+from common.progress_bar import create_progress_bar, ProgressCallback
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
 SINGLE_PUT_LIMIT = 4_500_000_000
