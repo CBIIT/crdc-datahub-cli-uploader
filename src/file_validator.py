@@ -98,7 +98,7 @@ class FileValidator:
             if not self.from_s3: # only validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
                 self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
-                self.log.info(f'{line_num - 1} out of {total_file_cnt} file(s) are validated.')
+                self.log.info(f'{line_num - 1} out of {total_file_cnt} file have been validated.')
                 if not result:
                     self.invalid_count += 1
                     continue
