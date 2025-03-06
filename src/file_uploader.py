@@ -65,10 +65,13 @@ class FileUploader:
     """
     def _prepare_files(self):
         files = []
+        file_count = 0
+        total_file_count = len(self.file_info_list)
         for info in self.file_info_list:
+            file_count += 1
             self.total_file_volume += int(info[FILE_SIZE_DEFAULT])
             if self.from_s3 == True: #download file from s3
-               self.prepare_s3_download_file(info)
+               self.prepare_s3_download_file(info, file_count, total_file_count)
             files.append({
                 self.TTL: self.retry,
                 self.INFO: info,
@@ -187,7 +190,7 @@ class FileUploader:
             return False
         return True
     
-    def prepare_s3_download_file(self, file_info):
+    def prepare_s3_download_file(self, file_info, file_count, total_file_count):
         """
         Prepare file information for downloading from S3.
 
@@ -207,7 +210,12 @@ class FileUploader:
         else:
             self.log.info(f"{file_info[FILE_NAME_DEFAULT]} has been downloaded from {self.file_dir} successfully!")
             # validate size and md5 of downloaded data file
-            if not self._validate_downloaded_file(file_info, file_path):
+            result = self._validate_downloaded_file(file_info, file_path)
+            if result:
+                self.log.info(f'Validating file integrity succeeded on "{file_info[FILE_NAME_DEFAULT]}"')
+            self.log.info(f'{file_count} out of {total_file_count} file(s) have been validated.')
+            if not result:
+                file_info[SUCCEEDED] = False
                 os.remove(file_path)
                 self.invalid_count += 1
                 return False

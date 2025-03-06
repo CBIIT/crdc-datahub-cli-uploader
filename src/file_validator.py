@@ -97,11 +97,13 @@ class FileValidator:
             file_id = info.get(FILE_ID_DEFAULT)
             if not self.from_s3: # only validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
-                self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
-                self.log.info(f'{line_num - 1} out of {total_file_cnt} file have been validated.')
+                if result:
+                    self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
+                self.log.info(f'{line_num - 1} out of {total_file_cnt} file(s) have been validated.')
                 if not result:
                     self.invalid_count += 1
                     continue
+                
             else: # check file existing and validate file size in s3 bucket
                 s3_file_size, msg = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
                 if not s3_file_size:
