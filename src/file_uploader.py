@@ -235,9 +235,9 @@ class FileUploader:
         :param start_at: A datetime object representing the start time of the eclipse.
         :return: None
         """
-        eclipse_time = "00:00:00" if uploaded_file_cnt == total_file_cnt else calculate_remain(total_file_volume, uploaded_file_volume, start_at)
-
-        self.log.info(f'{uploaded_file_cnt} ({format_size(uploaded_file_volume)}) out of {total_file_cnt} files ({format_size(total_file_volume)}) have been uploaded to destination in {calculate_eclipse(start_at)}, remaining uploading time: {eclipse_time}.')
+        remaining_time = "00:00:00" if uploaded_file_cnt == total_file_cnt else calculate_remain(total_file_volume, uploaded_file_volume, start_at)
+        average_speed = format_size(uploaded_file_volume/ (datetime.now() - start_at).total_seconds()) if uploaded_file_cnt > 0 else 0
+        self.log.info(f'{uploaded_file_cnt} ({format_size(uploaded_file_volume)}) out of {total_file_cnt} files ({format_size(total_file_volume)}) have been uploaded to destination in {calculate_eclipse(start_at)} with average speed at {average_speed}/sec, remaining uploading time: {remaining_time}.')
 
 """
 utile functions
