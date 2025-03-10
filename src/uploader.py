@@ -14,6 +14,7 @@ from upload_config import Config
 from file_validator import FileValidator
 from file_uploader import FileUploader
 from process_manifest import process_manifest_file
+from common.upload_heart_beater import UploadHeartBeater
 
 if LOG_PREFIX not in os.environ:
     os.environ[LOG_PREFIX] = 'Uploader Main'
@@ -87,7 +88,11 @@ def controller():
             configs[TEMP_CREDENTIAL] = temp_credential
             #step 5: upload all files to designated s3 bucket
             loader = FileUploader(configs, file_list, validator.md5_cache, validator.md5_cache_file)
+            # create upload heart beater instance
+            upload_heart_beater = UploadHeartBeater(configs[BATCH_ID], apiInvoker)
             try:
+                # start heart beater right before uploading files
+                upload_heart_beater.start()
                 result = loader.upload()
                 if not result:
                     log.error("Failed to upload files: can't upload files to bucket!")
@@ -98,8 +103,8 @@ def controller():
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
                         process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)
-                # dump md5 cache to file
 
+                upload_heart_beater.stop()
             except KeyboardInterrupt:
                 log.info('File uploading is interrupted.')
             finally: 
