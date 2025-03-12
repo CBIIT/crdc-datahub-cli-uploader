@@ -102,7 +102,7 @@ class APIInvoker:
             return False
 
     #3) update upload batch
-    def update_batch(self, batchID, uploaded_files, uploading=False):
+    def update_batch(self, batchID, uploaded_files, uploading="false"):
         self.batch = None
         #adjust file list to match the graphql param.
         file_array = []
@@ -113,8 +113,8 @@ class APIInvoker:
         mutation {{
             updateBatch (
                 batchID: \"{batchID}\", 
-                uploading: {uploading},
-                files: {file_array}
+                files: {file_array}, 
+                uploading: {uploading}
                 )
             {{
                 _id,
@@ -158,7 +158,8 @@ class APIInvoker:
                 name_field,
                 size_field,
                 md5_field,
-                omit_DCF_prefix
+                omit_DCF_prefix, 
+                heartbeat_interval
             }}
         }}
         """

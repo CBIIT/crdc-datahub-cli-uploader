@@ -4,7 +4,7 @@ import yaml
 import sys
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, RETRIES, OVERWRITE, \
-    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3
+    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3, HEARTBEAT_INTERVAL_CONFIG
 from bento.common.utils import get_logger
 from common.utils import clean_up_key_value
 
@@ -149,6 +149,9 @@ class Config():
 
         omit_dcf_prefix = data_file_config.get(OMIT_DCF_PREFIX.replace("-", "_"))
         self.data[OMIT_DCF_PREFIX] = False if omit_dcf_prefix is None else omit_dcf_prefix
+
+        heartbeat_interval = data_file_config.get(HEARTBEAT_INTERVAL_CONFIG)
+        self.data[HEARTBEAT_INTERVAL_CONFIG] = heartbeat_interval if heartbeat_interval else 300 #5min
 
         return True
 

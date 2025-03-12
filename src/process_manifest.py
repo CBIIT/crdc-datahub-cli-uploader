@@ -51,7 +51,6 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
         file_array = [final_manifest_name]
         newBatch = None
         if apiInvoker.create_batch(file_array):
-            
             newBatch = apiInvoker.new_batch
             if not newBatch.get(BATCH_BUCKET) or not newBatch[FILE_PREFIX] or not newBatch.get(BATCH_ID):
                 log.info("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")

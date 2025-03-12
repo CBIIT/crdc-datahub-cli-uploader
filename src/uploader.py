@@ -7,7 +7,7 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
@@ -89,10 +89,11 @@ def controller():
             #step 5: upload all files to designated s3 bucket
             loader = FileUploader(configs, file_list, validator.md5_cache, validator.md5_cache_file)
             # create upload heart beater instance
-            upload_heart_beater = UploadHeartBeater(configs[BATCH_ID], apiInvoker)
+            upload_heart_beater = UploadHeartBeater(configs[BATCH_ID], apiInvoker, configs[HEARTBEAT_INTERVAL_CONFIG]) if configs[UPLOAD_TYPE] == TYPE_FILE else None
             try:
                 # start heart beater right before uploading files
-                upload_heart_beater.start()
+                if upload_heart_beater:
+                    upload_heart_beater.start()
                 result = loader.upload()
                 if not result:
                     log.error("Failed to upload files: can't upload files to bucket!")
@@ -102,26 +103,26 @@ def controller():
                     log.info("File uploading completed!")
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
-                        process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)
-
-                upload_heart_beater.stop()
-            except KeyboardInterrupt:
-                log.info('File uploading is interrupted.')
-            finally: 
+                        process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)  
+                # stop heartbeat after uploading completed
+                if upload_heart_beater:
+                    upload_heart_beater.stop()
+                upload_heart_beater = None
                 #set fileList for update batch
                 file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED, False)} for item in file_list]
                 #step 6: update the batch
-                #uploaded_files: 
-                # (fileName: String
-                # succeeded: Boolean
-                # errors: [String])
                 if apiInvoker.update_batch(newBatch[BATCH_ID], file_array):
                     batch = apiInvoker.batch
                     log.info(f"The batch is updated: {newBatch[BATCH_ID]} with new status: {batch[BATCH_STATUS]} at {batch[BATCH_UPDATED]} ")
                 else:
                     log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
                     log.info(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
-    
+            except KeyboardInterrupt:
+                log.info('File uploading is interrupted.')
+                # stop heartbeat if interrupted
+                if upload_heart_beater:
+                    upload_heart_beater.stop()
+                    upload_heart_beater = None
     else:
         log.error(f"Found total {validator.invalid_count} file(s) are invalid!")
     

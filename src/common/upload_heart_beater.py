@@ -3,39 +3,39 @@ import threading
 import time
 
 """
-class: UploadHeartBeater to send a heart beat to backend during uploading files.
+class: UploadHeartBeater to send heartbeat to backend during uploading files.
 """
 class UploadHeartBeater:
-    def __init__(self, batch_id, graphql_client):
-        self._graphql_client = graphql_client
-        self._batch_id = batch_id
-        self._beat_thread = None
-        self._stop_event = threading.Event()
+    def __init__(self, batch_id, graphql_client, heartbeat_interval=300):
+        self.graphql_client = graphql_client
+        self.batch_id = batch_id
+        self.beat_thread = None
+        self.stop_event = threading.Event()
+        self.heartbeat_interval = heartbeat_interval
 
     """
-    private function: _beat to call updateBatch API in backend to set validating flag to true per 5 min.
+    private function: beat 
+    call updateBatch API in backend to set validating flag to true per 5 min.
     """
-    def _beat(self):
+    def __beat(self):
     
-        while not self._stop_event.is_set():
+        while not self.stop_event.is_set():
             try:
-                self._graphql_client.update_batch(self._batch_id, None, True)
-                time.sleep(5*60)
+                self.graphql_client.update_batch(self.batch_id, None, "true")
             except Exception as e:
                 print(f"Failed to update batch: {e}")
-                time.sleep(5*60)  
-            finally:  
-                continue
+            finally:
+                 # make the thread sleep for 5 min
+                self.stop_event.wait(self.heartbeat_interval)
     """
-    public function: start to start the heart beater thread
+    public function: start to start the heartbeat thread
     """
     def start(self):
-        self._beat_thread = threading.Thread(target=self._beat)
-        self._beat_thread.start()
+        self.beat_thread = threading.Thread(target=self.__beat)
+        self.beat_thread.start()
     """
-    public function: stop to stop the heart beater thread
+    public function: stop to stop the heartbeat thread
     """
     def stop(self):
-        self._stop_event.set()
-        self._beat_thread.join()
-        self._beat_thread = None
+        self.stop_event.set()
+        self.beat_thread.join()
