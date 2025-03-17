@@ -107,7 +107,7 @@ def controller():
                 # stop heartbeat after uploading completed
                 if upload_heart_beater:
                     upload_heart_beater.stop()
-                upload_heart_beater = None
+                    upload_heart_beater = None
                 #set fileList for update batch
                 file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED, False)} for item in file_list]
                 #step 6: update the batch

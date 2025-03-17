@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import threading
-import time
 
 """
 class: UploadHeartBeater to send heartbeat to backend during uploading files.
@@ -15,7 +14,7 @@ class UploadHeartBeater:
 
     """
     private function: beat 
-    call updateBatch API in backend to set validating flag to true per 5 min.
+    call updateBatch API in backend by set uploading to true per 5 min.
     """
     def __beat(self):
     
@@ -28,13 +27,13 @@ class UploadHeartBeater:
                  # make the thread sleep for 5 min
                 self.stop_event.wait(self.heartbeat_interval)
     """
-    public function: start to start the heartbeat thread
+    public function: start the heartbeat thread
     """
     def start(self):
         self.beat_thread = threading.Thread(target=self.__beat)
         self.beat_thread.start()
     """
-    public function: stop to stop the heartbeat thread
+    public function: stop the heartbeat thread
     """
     def stop(self):
         self.stop_event.set()
