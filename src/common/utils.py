@@ -1,7 +1,6 @@
 
 import sys
 import csv
-import boto3
 from uuid import UUID
 from datetime import datetime
 from common.constants import S3_START
