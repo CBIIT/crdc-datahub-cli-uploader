@@ -22,7 +22,7 @@ class Config():
         #args for data file type
         parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “data file"')
 
-        parser.add_argument('-r', '--retries', default=3, type=int, help='file uploading retries, optional, default value is 3')
+        parser.add_argument('-r', '--retries', type=int, help='file uploading retries, optional, default value is 3')
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
@@ -72,15 +72,17 @@ class Config():
             self.log.critical(f'Please provide “submission” (submission ID) in configuration file or command line argument.')
             return False
 
-        retry = self.data.get(RETRIES, 3) #default value is 3
-        if isinstance(retry, str):
+        retry = self.data.get(RETRIES) 
+        if not retry:
+            self.data[RETRIES] = 3 #default value is 3
+        elif isinstance(retry, str):
             if not retry.isdigit():
-                self.log.critical(f'Configuration error in “retries”: “{retry}” is not a valid integer.')
-                return False
+                self.log.warning(f'Configuration warning in “retries”: “{retry}” is not a valid integer. It is set to 3.')
+                self.data[retry] = 3
             else:
                 self.data[retry] =int(retry) 
         else:
-            self.data[RETRIES] =int(retry) 
+            self.data[RETRIES] =int(retry)
 
         overwrite = self.data.get(OVERWRITE, False) #default value is False
         if isinstance(overwrite, str):
