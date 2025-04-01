@@ -108,6 +108,19 @@ def controller():
                 if upload_heart_beater:
                     upload_heart_beater.stop()
                     upload_heart_beater = None
+               
+            except KeyboardInterrupt:
+                # stop heartbeat if interrupted
+                if upload_heart_beater:
+                    upload_heart_beater.stop()
+                    upload_heart_beater = None
+                error = 'File uploading is interrupted.'    
+                log.info(error)
+                for item in file_list:
+                    if not item.get(SUCCEEDED, False):
+                        item[ERRORS] = item[ERRORS].append(error) if item[ERRORS] else [error]
+                        item[SUCCEEDED] = False
+            finally:
                 #set fileList for update batch
                 file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED, False)} for item in file_list]
                 #step 6: update the batch
@@ -117,12 +130,6 @@ def controller():
                 else:
                     log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
                     log.info(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
-            except KeyboardInterrupt:
-                log.info('File uploading is interrupted.')
-                # stop heartbeat if interrupted
-                if upload_heart_beater:
-                    upload_heart_beater.stop()
-                    upload_heart_beater = None
     else:
         log.error(f"Found total {validator.invalid_count} file(s) are invalid!")
     
