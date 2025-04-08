@@ -7,9 +7,9 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, CURRENT_UPLOADER_VERSION_CONFIG
 from common.graphql_client import APIInvoker
-from common.utils import dump_dict_to_tsv, get_exception_msg
+from common.utils import dump_dict_to_tsv, get_exception_msg, compare_version
 from upload_config import Config
 from file_validator import FileValidator
 from file_uploader import FileUploader
@@ -26,23 +26,34 @@ def controller():
     print(f"v{CLI_VERSION}") 
     #step 1: process args, configuration file
     config = Config()
+    # step 1.1: check cli version
+    result, msg = config.check_version()
+    if result == 0:
+        log.warning(msg)
+    elif result == -1:
+        log.error(msg)
+        return 1
+    else:
+        log.info(msg)     
+    # exit if if with arg -v
+    if config.data.get("version"):
+        return 1
+    # step 1.2: validate configurations
     if not config.validate():
         log.error("Failed to upload files: missing required valid parameter(s)!")
         log.info("Failed to upload files: invalid parameter(s)!  Please check log file in tmp folder for details.")
         return 1
-    
-    #step 2: validate file or metadata
     configs = config.data
+    #step 2: validate file or metadata
     apiInvoker = APIInvoker(configs)
     # get data file config
     if configs[UPLOAD_TYPE] == TYPE_FILE:
-        # retrieve data file configuration
+         # retrieve data file configuration
         result, data_file_config = apiInvoker.get_data_file_config(configs["submission"])
         if not result or not data_file_config:
             log.error("Failed to upload files: can't get data file config!")
             log.info("Failed to upload files: can't get data file config! Please check log file in tmp folder for details.")
             return 1
-
         if not config.validate_file_config(data_file_config):
             log.error("Failed to upload files: invalid file config!")
             log.info("Failed to upload files: invalid file config! Please check log file in tmp folder for details.")

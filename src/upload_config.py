@@ -1,17 +1,18 @@
 import argparse
 import os
 import yaml
-import sys
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, RETRIES, OVERWRITE, \
-    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3, HEARTBEAT_INTERVAL_CONFIG
+    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3, HEARTBEAT_INTERVAL_CONFIG, CLI_VERSION, CURRENT_UPLOADER_VERSION_CONFIG
 from bento.common.utils import get_logger
-from common.utils import clean_up_key_value
-
+from common.graphql_client import APIInvoker
+from common.utils import clean_up_key_value, compare_version
+CLI_VERSION_API = "http://localhost:4020/api/graphql"
 class Config():
     def __init__(self):
         self.log = get_logger('Upload Config')
         parser = argparse.ArgumentParser(description='Upload files to AWS s3 bucket')
+        parser.add_argument('-v', '--version', action='store_true', help='Show version and continue')
         parser.add_argument('-a', '--api-url', help='API endpoint URL, required')
         parser.add_argument('-k', '--token', help='API token string, required')
         parser.add_argument('-u', '--submission', help='submission ID, required')
@@ -26,10 +27,9 @@ class Config():
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
-       
+        
         args = parser.parse_args()
         self.data = {}
-
         if args.config:
             if not os.path.isfile(args.config.strip()):
                 self.log.critical(f'Configuration file “{args.config}” is not readable. Please make sure the path is correct and the file is readable.')
@@ -156,6 +156,16 @@ class Config():
         self.data[HEARTBEAT_INTERVAL_CONFIG] = heartbeat_interval if heartbeat_interval else 300 #5min
 
         return True
+    
+    def check_version(self):
+        configs = self.data if self.data.get(API_URL) else {API_URL: CLI_VERSION_API}
+        apiInvoker = APIInvoker(configs)
+        result, available_version = apiInvoker.get_cli_version()
+        if not result:
+            msg = f"Failed to check CLI version, can't retrieve configuration from API: {CLI_VERSION_API}"
+            return -1, msg
+        apiInvoker = None
+        return compare_version(available_version, CLI_VERSION)
 
 
 

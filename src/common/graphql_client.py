@@ -188,6 +188,39 @@ class APIInvoker:
             self.log.debug(e)
             self.log.exception(f'Get data file config failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False, None
+    
+    def get_cli_version(self):
+        body = f"""
+        query {{
+            retrieveCLIUploaderVersion
+        }}
+        """
+        try:
+            response = requests.post(url=self.url, json={"query": body})
+            status = response.status_code
+            self.log.info(f"get_cli_version response status code: {status}.")
+            if status == 200:
+                results = response.json()
+                if results.get("errors"):
+                    msg = f'Get CLI Version failed: {results.get("errors")[0].get("message")}.'
+                    self.log.error(msg)
+                    return False, None
+                else:
+                    version_config = results.get("data").get("retrieveCLIUploaderVersion")
+                    if version_config:
+                        return True, version_config
+                    else:
+                        self.log.error('Get CLI Version  failed!')
+                        return False, None
+            else:
+                self.log.error(f'Get CLI Version  failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
+                return False, None
+
+        except Exception as e:
+            self.log.debug(e)
+            self.log.exception(f'Get CLI Version failed - internal error. Please try again and contact the helpdesk if this error persists.')
+            return False, None
+        
 
 
     
