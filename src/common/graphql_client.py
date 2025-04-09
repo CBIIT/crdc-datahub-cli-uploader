@@ -44,7 +44,6 @@ class APIInvoker:
                 return False
 
         except Exception as e:
-            self.log.debug(e)
             self.log.exception(f'Retrieve temporary credential failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
 
@@ -145,7 +144,6 @@ class APIInvoker:
                 self.log.error(f'Update batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
                 return False
         except Exception as e:
-            self.log.debug(e)
             self.log.exception(f'Update batch failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
         
@@ -185,7 +183,6 @@ class APIInvoker:
                 return False, None
 
         except Exception as e:
-            self.log.debug(e)
             self.log.exception(f'Get data file config failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False, None
     
@@ -217,7 +214,7 @@ class APIInvoker:
                 return False, None
 
         except Exception as e:
-            self.log.debug(e)
+            # self.log.debug(e)
             self.log.exception(f'Get CLI Version failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False, None
         
