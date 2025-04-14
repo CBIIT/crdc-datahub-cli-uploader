@@ -78,9 +78,9 @@ class Config():
         elif isinstance(retry, str):
             if not retry.isdigit():
                 self.log.warning(f'Configuration warning in “retries”: “{retry}” is not a valid integer. It is set to 3.')
-                self.data[retry] = 3
+                self.data[RETRIES] = 3
             else:
-                self.data[retry] =int(retry) 
+                self.data[RETRIES] =int(retry) 
         else:
             self.data[RETRIES] =int(retry)
 
