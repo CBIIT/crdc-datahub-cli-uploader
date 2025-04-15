@@ -53,7 +53,8 @@ class APIInvoker:
     def create_batch(self, file_array):
         self.new_batch = None
         #adjust file list to match the graphql param.
-        file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
+        # file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
+        file_array = json.dumps(file_array)
         body = f"""
         mutation {{
             createBatch (
@@ -144,6 +145,45 @@ class APIInvoker:
             self.log.debug(e)
             self.log.exception(f'Update batch failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
+        
+    # 4) get_data_file_config()
+    def get_data_file_config(self, submissionID):
+        body = f"""
+        query {{
+            retrieveFileNodeConfig (submissionID: \"{submissionID}\") {{
+                id_field,
+                name_field,
+                size_field,
+                md5_field,
+                omit_DCF_prefix
+            }}
+        }}
+        """
+        try:
+            response = requests.post(url=self.url, headers=self.headers, json={"query": body})
+            status = response.status_code
+            self.log.info(f"get_data_file_config response status code: {status}.")
+            if status == 200:
+                results = response.json()
+                if results.get("errors"):
+                    msg = f'Get data file config failed: {results.get("errors")[0].get("message")}.'
+                    self.log.error(msg)
+                    return False, None
+                else:
+                    data_file_config = results.get("data").get("retrieveFileNodeConfig")
+                    if data_file_config:
+                        return True, data_file_config
+                    else:
+                        self.log.error('Get data file config failed!')
+                        return False, None
+            else:
+                self.log.error(f'Get data file config failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
+                return False, None
+
+        except Exception as e:
+            self.log.debug(e)
+            self.log.exception(f'Get data file config failed - internal error. Please try again and contact the helpdesk if this error persists.')
+            return False, None
 
 
     

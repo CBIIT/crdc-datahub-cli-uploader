@@ -5,7 +5,7 @@ from common.graphql_client import APIInvoker
 from copier import Copier
 
 
-def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manifest_columns):
+def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, manifest_columns):
     """
     function: process_manifest_file
     params:
@@ -25,7 +25,7 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
      4) update the batch with file info.
     """
     if not file_infos or len(file_infos) == 0:
-        print(f"Failed to add file id to the pre-manifest, {file_path}.")
+        log.info(f"Failed to add file id to the pre-manifest, {file_path}.")
         return False
     file_path = configs.get(PRE_MANIFEST)
     final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if not has_file_id else file_path
@@ -39,7 +39,7 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
         if not has_file_id:
             result = add_file_id(file_id_name, file_name_name, final_manifest_path , file_infos, manifest_rows, manifest_columns, configs.get(OMIT_DCF_PREFIX))
             if not result:
-                print(f"Failed to add file id to the pre-manifest, {final_manifest_path }.")
+                log.info(f"Failed to add file id to the pre-manifest, {final_manifest_path }.")
                 return False
         # create a batch for upload the final manifest file
         manifest_file_size = os.path.getsize(final_manifest_path)
@@ -47,25 +47,27 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
         configs[UPLOAD_TYPE] = "metadata"
         apiInvoker = APIInvoker(configs)
         final_manifest_name = os.path.basename(final_manifest_path)
-        file_array = [{"fileName": final_manifest_name, "size": manifest_file_size}]
+        #file_array = [{"fileName": final_manifest_name, "size": manifest_file_size}]
+        file_array = [final_manifest_name]
         newBatch = None
         if apiInvoker.create_batch(file_array):
             
             newBatch = apiInvoker.new_batch
             if not newBatch.get(BATCH_BUCKET) or not newBatch[FILE_PREFIX] or not newBatch.get(BATCH_ID):
-                print("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
+                log.info("Failed to upload files: can't create new batch! Please check log file in tmp folder for details.")
                 return False
             configs[S3_BUCKET] = newBatch.get(BATCH_BUCKET)
             configs[FILE_PREFIX] = newBatch[FILE_PREFIX]
             configs[BATCH_ID] = newBatch.get(BATCH_ID)
-            print(f"New batch is created: {newBatch.get(BATCH_ID)} at {newBatch[BATCH_CREATED]}")
+            log.info(f"New batch is created: {newBatch.get(BATCH_ID)} at {newBatch[BATCH_CREATED]}")
             uploader = Copier(configs[S3_BUCKET], configs[FILE_PREFIX] , configs)
-            result = uploader.copy_file({FILE_NAME_DEFAULT: final_manifest_name, FILE_PATH: final_manifest_path, FILE_SIZE_DEFAULT: manifest_file_size}, True, False)   
+            result = uploader.copy_file({FILE_NAME_DEFAULT: final_manifest_name, FILE_PATH: final_manifest_path, FILE_SIZE_DEFAULT: manifest_file_size}, True, False)  
+            log.info(f'The manifest, "{final_manifest_name}" has been uploaded to destination successfully.')
     except Exception as e:
-        print(f"Failed to add file id to the pre-manifest, {file_path}. Error: {e}") 
+        log.info(f"Failed to add file id to the pre-manifest, {file_path}. Error: {e}") 
     finally:
         if not newBatch or not result:
-            print(f"Failed process the manifest, {final_manifest_path}.")
+            log.info(f"Failed process the manifest, {final_manifest_path}.")
             return False
         else:
             # update batch
@@ -73,9 +75,9 @@ def process_manifest_file(configs, has_file_id, file_infos, manifest_rows, manif
             errors = [f"Failed to upload manifest file,{final_manifest_name}"] if not status else []
             manifest_file_info = {"fileName": final_manifest_name, "succeeded": status, "errors": errors, "skipped": False}
             if not apiInvoker.update_batch(newBatch[BATCH_ID], [manifest_file_info]):
-                print(f"Failed to update batch, {newBatch[BATCH_ID]}!")
+                log.info(f"Failed to update batch, {newBatch[BATCH_ID]}!")
                 return False
-            print(f"Successfully process the manifest, {final_manifest_path}.")
+            log.info(f"Successfully process the manifest, {final_manifest_path}.")
         return True
 
 # This method will create a new manifest file with the file id column added to the pre-manifest.

@@ -21,11 +21,6 @@ class Config():
         parser.add_argument('--dryrun', default=False, type=bool, help='Only check original file, won\'t copy any files, optional, default is false')
         #args for data file type
         parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “data file"')
-        parser.add_argument('-n', '--name-field', help='header file name in manifest, optional, default value is "file_name"')
-        parser.add_argument('-s', '--size-field', help='header file size in manifest, optional, default value is "file_size"')
-        parser.add_argument('-m', '--md5-field', help='header md5 name in manifest, optional, default value is "md5sum"')
-        parser.add_argument('-i', '--id-field', help='header file ID name in manifest, optional, default value is "file_id"')
-        parser.add_argument('-o', '--omit-DCF-prefix', help='boolean to define if need DCF prefix "dg.4DFC"')
 
         parser.add_argument('-r', '--retries', default=3, type=int, help='file uploading retries, optional, default value is 3')
 
@@ -103,7 +98,7 @@ class Config():
             return False
         elif type not in UPLOAD_TYPES:
             self.log.critical(f'Configuration error in "type": “{type}” is not valid. Valid “type” value can be one of [“data file”, “metadata”]')
-            return False
+            return False  
         else:
             if type == TYPE_FILE: #data file
                 #check manifest
@@ -117,27 +112,6 @@ class Config():
                         return False
 
                 self.data[PRE_MANIFEST]  = manifest
-                #check header names in manifest file
-                file_name_header= self.data.get(FILE_NAME_FIELD)
-                if file_name_header is None:
-                    self.data[FILE_NAME_FIELD] = FILE_NAME_DEFAULT
-
-                file_size_header = self.data.get(FILE_SIZE_FIELD)
-                if file_size_header is None:
-                    self.data[FILE_SIZE_FIELD] = FILE_SIZE_DEFAULT
-
-                md5_header = self.data.get(FILE_MD5_FIELD)
-                if  md5_header is None:
-                    self.data[FILE_MD5_FIELD] = MD5_DEFAULT
-
-                file_id_header= self.data.get(FILE_ID_FIELD)
-                if file_id_header is None:
-                    self.log.critical(f'file id field is required.')
-                    return False
-                 
-                omit_dcf_prefix = self.data.get(OMIT_DCF_PREFIX)
-                if omit_dcf_prefix is None:
-                    self.data[OMIT_DCF_PREFIX] = False
         
         filepath = self.data.get(FILE_DIR)
         if filepath is None:
@@ -154,4 +128,29 @@ class Config():
                 self.data[FROM_S3] = True
   
         return True
+    
+    def validate_file_config(self, data_file_config):
+        #check header names in manifest file
+        file_name_header= data_file_config.get(FILE_NAME_FIELD.replace("-", "_"))
+        self.data[FILE_NAME_FIELD] = file_name_header if file_name_header else FILE_NAME_DEFAULT
+
+        file_size_header = data_file_config.get(FILE_SIZE_FIELD.replace("-", "_"))
+        self.data[FILE_SIZE_FIELD] = file_size_header if file_size_header else FILE_SIZE_DEFAULT
+
+        md5_header = data_file_config.get(FILE_MD5_FIELD.replace("-", "_"))
+        self.data[FILE_MD5_FIELD] = md5_header if md5_header else MD5_DEFAULT
+
+        file_id_header= data_file_config.get(FILE_ID_FIELD.replace("-", "_"))
+        if file_id_header is None:
+            self.log.critical(f'file id field is required.')
+            return False
+        
+        self.data[FILE_ID_FIELD] = file_id_header
+
+        omit_dcf_prefix = data_file_config.get(OMIT_DCF_PREFIX.replace("-", "_"))
+        self.data[OMIT_DCF_PREFIX] = False if omit_dcf_prefix is None else omit_dcf_prefix
+
+        return True
+
+
 
