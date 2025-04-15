@@ -156,6 +156,26 @@ def dump_data_to_csv(dict_list, file_path):
         for row in dict_list:
             writer.writerow(row)
 
+def compare_version(available_version, self_version):
+    """
+    compare this_version with current_version with major and minor
+    """
+    current_major, current_minor = available_version.split(".")
+    self_major, self_minor = self_version.split(".")
+    msg = f"You are using the latest version {available_version}"
+    if int(current_major) > int(self_major):
+        msg = f"A newer CLI version v{available_version} is available (current version is v{self_version}). Upgrading to the latest version is required. Please head to CRDC " \
+                "Submission Portal to download the latest CLI uploader."
+
+        return -1, msg
+    elif int(current_major) == int(self_major) and int(current_minor) > int(self_minor):
+        msg = f"A newer CLI version v{available_version} is available (current version is v{self_version})). It is recommended to download the latest version. Please head to CRDC \
+                Submission Portal to download the latest CLI uploader."    
+        return 0, msg
+    else:
+        return 1, msg
+   
+
                            
     
 
