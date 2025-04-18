@@ -1,10 +1,14 @@
 import csv, os, io
+import pandas as pd
+import numpy as np
 from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, DCF_PREFIX, BATCH_CREATED,\
-    FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX
+    FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX,\
+    TEMP_DOWNLOAD_DIR, SEPARATOR_CHAR
 from common.graphql_client import APIInvoker
 from copier import Copier
 
-
+SEPARATOR_CHAR = '\t'
+UTF8_ENCODE ='utf8'
 def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, manifest_columns):
     """
     function: process_manifest_file
@@ -45,6 +49,7 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
         manifest_file_size = os.path.getsize(final_manifest_path)
         manifest_file_info = {"fileName": final_manifest_path, "size": manifest_file_size} 
         configs[UPLOAD_TYPE] = "metadata"
+        # add file_id into child tsv files
         apiInvoker = APIInvoker(configs)
         final_manifest_name = os.path.basename(final_manifest_path)
         #file_array = [{"fileName": final_manifest_name, "size": manifest_file_size}]
@@ -92,3 +97,36 @@ def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, m
         writer.writerow(manifest_columns)
         writer.writerows(output)
     return True
+
+def insert_file_id_2_children(configs, manifest_rows, is_s3):
+     # check if any tsv files in the dir of manifest file
+    dir = os.path.dirname(configs.get(PRE_MANIFEST)) if not is_s3 else TEMP_DOWNLOAD_DIR
+    tsv_files = [os.path.join(dir, f) for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f)) 
+                 and (f.endswith('.tsv') or f.endswith('.txt'))]
+    file_type = manifest_rows[0].get(UPLOAD_TYPE)
+    if file_type:
+        file_id_to_check = f"{file_type}.{configs.get(FILE_ID_FIELD)}"
+        if len(tsv_files) > 0:
+            children_files = []
+            for file in tsv_files:
+                # check if tsv file's header contains 
+                with open(file) as f:
+                    reader = csv.DictReader(f, delimiter='\t')
+                    header = next(reader)  # get the first row
+                    if file_id_to_check in header:
+                        children_files.append(file)
+        if len(children_files) > 0:
+            for file in children_files:
+                # read tsv file to dataframe
+                df = pd.read_csv(file, sep=SEPARATOR_CHAR, header=0, dtype='str', encoding=UTF8_ENCODE,keep_default_na=False,na_values=[''])
+                if file_id_to_check in df.columns:
+                    for index, row in df.iterrows():
+                        fileName = row[file_id_to_check]
+                        if fileName:
+                            file_info = next((file for file in manifest_rows if file[configs[FILE_NAME_FIELD]] == fileName), None)
+                            if file_info:
+                                df.at[index, file_id_to_check] = file_info[configs[FILE_ID_FIELD]]
+                    df.to_csv(file, sep ='\t', index=False)
+                
+
+                

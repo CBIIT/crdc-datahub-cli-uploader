@@ -103,7 +103,6 @@ class FileValidator:
                 if not result:
                     self.invalid_count += 1
                     continue
-                
             else: # check file existing and validate file size in s3 bucket
                 s3_file_size, msg = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
                 if not s3_file_size:
@@ -166,7 +165,6 @@ class FileValidator:
             finally:
                 if s3_bucket:
                     s3_bucket.close()
-
         try:
             with open(self.pre_manifest) as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')

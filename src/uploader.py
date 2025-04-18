@@ -13,7 +13,7 @@ from common.utils import dump_dict_to_tsv, get_exception_msg, compare_version
 from upload_config import Config
 from file_validator import FileValidator
 from file_uploader import FileUploader
-from process_manifest import process_manifest_file
+from process_manifest import process_manifest_file, insert_file_id_2_children
 from common.upload_heart_beater import UploadHeartBeater
 
 if LOG_PREFIX not in os.environ:
@@ -66,7 +66,6 @@ def controller():
         return 1
     
     file_list = validator.fileList
-
     if validator.invalid_count == 0:
         #step 3: create a batch
         # file_array = [{"fileName": item[FILE_NAME_DEFAULT], "size": item[FILE_SIZE_DEFAULT]} for item in file_list]
@@ -115,6 +114,8 @@ def controller():
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
                         process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)  
+                        # insert file_id to child tsv files
+                        insert_file_id_2_children(configs, validator.manifest_rows, validator.from_s3)
                 # stop heartbeat after uploading completed
                 if upload_heart_beater:
                     upload_heart_beater.stop()
