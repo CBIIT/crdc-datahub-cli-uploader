@@ -7,7 +7,7 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, CURRENT_UPLOADER_VERSION_CONFIG
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, CURRENT_UPLOADER_VERSION_CONFIG, PRE_MANIFEST
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg, compare_version
 from upload_config import Config
@@ -44,6 +44,7 @@ def controller():
         log.info("Failed to upload files: invalid parameter(s)!  Please check log file in tmp folder for details.")
         return 1
     configs = config.data
+    s3_manifest_url = configs[PRE_MANIFEST] if configs[PRE_MANIFEST].startswith("s3://") else None
     #step 2: validate file or metadata
     apiInvoker = APIInvoker(configs)
     # get data file config
@@ -115,7 +116,7 @@ def controller():
                         # process manifest file
                         process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)  
                         # insert file_id to child tsv files
-                        insert_file_id_2_children(configs, validator.manifest_rows, validator.from_s3)
+                        insert_file_id_2_children(configs, validator.manifest_rows, validator.from_s3, s3_manifest_url)
                 # stop heartbeat after uploading completed
                 if upload_heart_beater:
                     upload_heart_beater.stop()

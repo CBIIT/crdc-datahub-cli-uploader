@@ -3,9 +3,10 @@ import pandas as pd
 import numpy as np
 from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, DCF_PREFIX, BATCH_CREATED,\
     FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX,\
-    TEMP_DOWNLOAD_DIR, SEPARATOR_CHAR
+    TEMP_DOWNLOAD_DIR
 from common.graphql_client import APIInvoker
 from copier import Copier
+from common.s3util import S3Bucket
 
 SEPARATOR_CHAR = '\t'
 UTF8_ENCODE ='utf8'
@@ -98,35 +99,86 @@ def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, m
         writer.writerows(output)
     return True
 
-def insert_file_id_2_children(configs, manifest_rows, is_s3):
+def insert_file_id_2_children(configs, manifest_rows, is_s3, manifest_s3_url):
      # check if any tsv files in the dir of manifest file
-    dir = os.path.dirname(configs.get(PRE_MANIFEST)) if not is_s3 else TEMP_DOWNLOAD_DIR
-    tsv_files = [os.path.join(dir, f) for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f)) 
-                 and (f.endswith('.tsv') or f.endswith('.txt'))]
-    file_type = manifest_rows[0].get(UPLOAD_TYPE)
-    if file_type:
-        file_id_to_check = f"{file_type}.{configs.get(FILE_ID_FIELD)}"
-        if len(tsv_files) > 0:
-            children_files = []
-            for file in tsv_files:
-                # check if tsv file's header contains 
-                with open(file) as f:
-                    reader = csv.DictReader(f, delimiter='\t')
-                    header = next(reader)  # get the first row
-                    if file_id_to_check in header:
-                        children_files.append(file)
-        if len(children_files) > 0:
-            for file in children_files:
-                # read tsv file to dataframe
-                df = pd.read_csv(file, sep=SEPARATOR_CHAR, header=0, dtype='str', encoding=UTF8_ENCODE,keep_default_na=False,na_values=[''])
-                if file_id_to_check in df.columns:
-                    for index, row in df.iterrows():
-                        fileName = row[file_id_to_check]
-                        if fileName:
-                            file_info = next((file for file in manifest_rows if file[configs[FILE_NAME_FIELD]] == fileName), None)
-                            if file_info:
-                                df.at[index, file_id_to_check] = file_info[configs[FILE_ID_FIELD]]
-                    df.to_csv(file, sep ='\t', index=False)
-                
+    manifest_file = configs.get(PRE_MANIFEST) if not is_s3 else manifest_s3_url
+    dir = os.path.dirname(manifest_file) if not is_s3 else TEMP_DOWNLOAD_DIR
+    s3_bucket = None
+    try:
+        if is_s3:
+            s3_bucket = S3Bucket()
+            # download tsv or txt files from s3 to TEMP_DOWNLOAD_DIR
+            download_meatadata_in_s3(manifest_file, s3_bucket)
+            
+        tsv_files = [os.path.join(dir, f) for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f)) 
+                    and (f.endswith('.tsv') or f.endswith('.txt'))]
+        file_type = manifest_rows[0].get(UPLOAD_TYPE)
+        if file_type:
+            file_id_to_check = f"{file_type}.{configs.get(FILE_ID_FIELD)}"
+            if len(tsv_files) > 0:
+                children_files = []
+                for file in tsv_files:
+                    # check if tsv file's header contains 
+                    with open(file) as f:
+                        reader = csv.DictReader(f, delimiter='\t')
+                        header = next(reader)  # get the first row
+                        if file_id_to_check in header:
+                            children_files.append(file)
+            if len(children_files) > 0:
+                for file in children_files:
+                    # read tsv file to dataframe
+                    df = pd.read_csv(file, sep=SEPARATOR_CHAR, header=0, dtype='str', encoding=UTF8_ENCODE,keep_default_na=False,na_values=[''])
+                    if file_id_to_check in df.columns:
+                        for index, row in df.iterrows():
+                            fileName = row[file_id_to_check]
+                            if fileName:
+                                file_info = next((file for file in manifest_rows if file[configs[FILE_NAME_FIELD]] == fileName), None)
+                                if file_info:
+                                    file_id = file_info[configs[FILE_ID_FIELD]]
+                                    df.at[index, file_id_to_check] = file_id
 
+                        file_ext = '.tsv' if file.endswith('.tsv') else '.txt'
+                        final_file_path = file.replace(file_ext, f'-final{file_ext}')
+
+                        df.to_csv(final_file_path, sep ='\t', index=False)
+                        if is_s3:
+                            # upload final metadata file into s3
+                            upload_metadata_to_s3(manifest_file, final_file_path, s3_bucket)
+    finally:
+        if s3_bucket:
+            s3_bucket = None
+                
+def download_meatadata_in_s3(manifest_file_path, s3_bucket):
+    #  s3://crdcdh-test-submission/9f42b5f1-5ea4-4923-a9bb-f496c63362ce/file/file.txt
+    bucket, prefix, manifest_file = get_s3_bucket_and_prefix(manifest_file_path)
+    # download all files with ext "tsv" or "txt" in the folder of prefix from s3
+    s3_bucket.set_s3_client(bucket, None)
+    metadata_files = s3_bucket.get_contents(prefix)
+    for file in metadata_files:
+        if not manifest_file in file:
+            file_name = file.split("/")[-1]
+            s3_bucket.download_object(file, os.path.join(TEMP_DOWNLOAD_DIR,file_name))
+
+def upload_metadata_to_s3(manifest_file_path, file_path, s3_bucket):
+    bucket, prefix, _ = get_s3_bucket_and_prefix(manifest_file_path)
+    # upload all files with ext "tsv" or "txt" in the folder of prefix from s3
+    s3_bucket.set_s3_client(bucket, None)
+    file_name = file_path.split("/")[-1]
+    key = os.path.join(prefix, file_name)
+    s3_bucket.put_file(key, file_path)
+
+def get_s3_bucket_and_prefix(manifest_file_path):
+     #  s3://crdcdh-test-submission/9f42b5f1-5ea4-4923-a9bb-f496c63362ce/file/file.txt
+    manifest_file_path = manifest_file_path.replace("s3://", "")
+    temp = manifest_file_path.split("/")
+    bucket = temp[0]
+    prefix = "/".join(temp[1:-1])
+    manifest_file = temp[-1]
+    return bucket, prefix, manifest_file
+
+
+    
+
+     
+   
                 
