@@ -9,7 +9,7 @@ from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_ST
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
     FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, CURRENT_UPLOADER_VERSION_CONFIG, PRE_MANIFEST
 from common.graphql_client import APIInvoker
-from common.utils import dump_dict_to_tsv, get_exception_msg, compare_version
+from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
 from file_validator import FileValidator
 from file_uploader import FileUploader

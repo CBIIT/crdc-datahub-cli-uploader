@@ -10,6 +10,7 @@ from common.s3util import S3Bucket
 
 SEPARATOR_CHAR = '\t'
 UTF8_ENCODE ='utf8'
+NODE_TYPE_NAME = 'type'
 def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, manifest_columns):
     """
     function: process_manifest_file
@@ -99,20 +100,21 @@ def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, m
         writer.writerows(output)
     return True
 
+# insert file node ID into relationship data fiels in children's metadata file.
 def insert_file_id_2_children(configs, manifest_rows, is_s3, manifest_s3_url):
      # check if any tsv files in the dir of manifest file
-    manifest_file = configs.get(PRE_MANIFEST) if not is_s3 else manifest_s3_url
+    manifest_file = configs.get(PRE_MANIFEST)
     dir = os.path.dirname(manifest_file) if not is_s3 else TEMP_DOWNLOAD_DIR
     s3_bucket = None
     try:
         if is_s3:
             s3_bucket = S3Bucket()
             # download tsv or txt files from s3 to TEMP_DOWNLOAD_DIR
-            download_meatadata_in_s3(manifest_file, s3_bucket)
+            download_meatadata_in_s3(manifest_s3_url, s3_bucket)
             
         tsv_files = [os.path.join(dir, f) for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f)) 
-                    and (f.endswith('.tsv') or f.endswith('.txt'))]
-        file_type = manifest_rows[0].get(UPLOAD_TYPE)
+                    and (f.endswith('.tsv') or f.endswith('.txt')) and f != manifest_file] 
+        file_type = manifest_rows[0].get(NODE_TYPE_NAME) 
         if file_type:
             file_id_to_check = f"{file_type}.{configs.get(FILE_ID_FIELD)}"
             if len(tsv_files) > 0:
@@ -143,11 +145,14 @@ def insert_file_id_2_children(configs, manifest_rows, is_s3, manifest_s3_url):
                         df.to_csv(final_file_path, sep ='\t', index=False)
                         if is_s3:
                             # upload final metadata file into s3
-                            upload_metadata_to_s3(manifest_file, final_file_path, s3_bucket)
+                            upload_metadata_to_s3(manifest_s3_url, final_file_path, s3_bucket)
     finally:
         if s3_bucket:
             s3_bucket = None
-                
+
+"""
+download tsv or txt files from s3 to TEMP_DOWNLOAD_DIR
+"""
 def download_meatadata_in_s3(manifest_file_path, s3_bucket):
     #  s3://crdcdh-test-submission/9f42b5f1-5ea4-4923-a9bb-f496c63362ce/file/file.txt
     bucket, prefix, manifest_file = get_s3_bucket_and_prefix(manifest_file_path)
@@ -158,15 +163,19 @@ def download_meatadata_in_s3(manifest_file_path, s3_bucket):
         if not manifest_file in file:
             file_name = file.split("/")[-1]
             s3_bucket.download_object(file, os.path.join(TEMP_DOWNLOAD_DIR,file_name))
-
+"""
+upload metadata file into s3
+"""
 def upload_metadata_to_s3(manifest_file_path, file_path, s3_bucket):
     bucket, prefix, _ = get_s3_bucket_and_prefix(manifest_file_path)
-    # upload all files with ext "tsv" or "txt" in the folder of prefix from s3
     s3_bucket.set_s3_client(bucket, None)
     file_name = file_path.split("/")[-1]
     key = os.path.join(prefix, file_name)
     s3_bucket.put_file(key, file_path)
 
+"""
+get bucket and prefix from manifest file path
+"""
 def get_s3_bucket_and_prefix(manifest_file_path):
      #  s3://crdcdh-test-submission/9f42b5f1-5ea4-4923-a9bb-f496c63362ce/file/file.txt
     manifest_file_path = manifest_file_path.replace("s3://", "")
