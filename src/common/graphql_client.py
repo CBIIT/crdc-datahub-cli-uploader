@@ -101,7 +101,7 @@ class APIInvoker:
             return False
 
     #3) update upload batch
-    def update_batch(self, batchID, uploaded_files, uploading="false"):
+    def update_batch(self, batchID, uploaded_files, uploading="false", quiet=False):
         self.batch = None
         #adjust file list to match the graphql param.
         file_array = []
@@ -141,7 +141,8 @@ class APIInvoker:
                         self.log.error('Update batch failed!')
                         return False
             else:
-                self.log.error(f'Update batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
+                if not quiet:
+                    self.log.error(f'Update batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
                 return False
         except Exception as e:
             self.log.exception(f'Update batch failed - internal error. Please try again and contact the helpdesk if this error persists.')
