@@ -128,6 +128,7 @@ def insert_file_id_2_children(configs, manifest_rows, is_s3, manifest_s3_url):
                             children_files.append(file)
             if len(children_files) > 0:
                 for file in children_files:
+                    inserted = False
                     # read tsv file to dataframe
                     df = pd.read_csv(file, sep=SEPARATOR_CHAR, header=0, dtype='str', encoding=UTF8_ENCODE,keep_default_na=False,na_values=[''])
                     if file_id_to_check in df.columns:
@@ -138,14 +139,14 @@ def insert_file_id_2_children(configs, manifest_rows, is_s3, manifest_s3_url):
                                 if file_info:
                                     file_id = file_info[configs[FILE_ID_FIELD]]
                                     df.at[index, file_id_to_check] = file_id
-
-                        file_ext = '.tsv' if file.endswith('.tsv') else '.txt'
-                        final_file_path = file.replace(file_ext, f'-final{file_ext}')
-
-                        df.to_csv(final_file_path, sep ='\t', index=False)
-                        if is_s3:
-                            # upload final metadata file into s3
-                            upload_metadata_to_s3(manifest_s3_url, final_file_path, s3_bucket)
+                                    inserted = True
+                        if inserted:
+                            file_ext = '.tsv' if file.endswith('.tsv') else '.txt'
+                            final_file_path = file.replace(file_ext, f'-final{file_ext}')
+                            df.to_csv(final_file_path, sep ='\t', index=False)
+                            if is_s3:
+                                # upload final metadata file into s3
+                                upload_metadata_to_s3(manifest_s3_url, final_file_path, s3_bucket)
     finally:
         if s3_bucket:
             s3_bucket = None
