@@ -20,7 +20,7 @@ class UploadHeartBeater:
     
         while not self.stop_event.is_set():
             try:
-                self.graphql_client.update_batch(self.batch_id, None, "true", True)
+                self.graphql_client.update_batch(self.batch_id, None, "true")
             except Exception as e:
                 print(f"Failed to update batch: {e}")
             finally:
