@@ -128,7 +128,8 @@ class APIInvoker:
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
-            self.log.info(f"update batch response status code: {status}.")
+            if uploading == "false":
+                self.log.info(f"update batch response status code: {status}.")
             if status == 200: 
                 results = response.json()
                 if results.get("errors"):
@@ -141,7 +142,8 @@ class APIInvoker:
                         self.log.error('Update batch failed!')
                         return False
             else:
-                self.log.error(f'Update batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
+                if uploading == "false":
+                    self.log.error(f'Update batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
                 return False
         except Exception as e:
             self.log.exception(f'Update batch failed - internal error. Please try again and contact the helpdesk if this error persists.')
