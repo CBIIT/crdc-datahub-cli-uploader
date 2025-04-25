@@ -168,7 +168,7 @@ def compare_version(available_version, self_version):
 
         return -1, msg
     elif int(current_major) == int(self_major) and int(current_minor) > int(self_minor):
-        msg = f"A newer CLI version v{available_version} is available (current version is v{self_version})). It is recommended to download the latest version. Please head to CRDC Submission Portal to download the latest CLI uploader."    
+        msg = f"A newer CLI version v{available_version} is available (current version is v{self_version}). It is recommended to download the latest version. Please head to CRDC Submission Portal to download the latest CLI uploader."    
         return 0, msg
     else:
         return 1, msg
