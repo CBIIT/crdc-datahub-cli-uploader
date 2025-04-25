@@ -44,7 +44,7 @@ def controller():
         log.info("Failed to upload files: invalid parameter(s)!  Please check log file in tmp folder for details.")
         return 1
     configs = config.data
-    s3_manifest_url = configs[PRE_MANIFEST] if configs[PRE_MANIFEST].startswith("s3://") else None
+    s3_manifest_url = configs[PRE_MANIFEST] if configs.get(PRE_MANIFEST) and configs[PRE_MANIFEST].startswith("s3://") else None
     #step 2: validate file or metadata
     apiInvoker = APIInvoker(configs)
     # get data file config
