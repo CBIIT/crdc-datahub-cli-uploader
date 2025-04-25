@@ -110,7 +110,7 @@ def insert_file_id_2_children(configs, manifest_rows, is_s3, manifest_s3_url):
         if is_s3:
             s3_bucket = S3Bucket()
             # download tsv or txt files from s3 to TEMP_DOWNLOAD_DIR
-            download_meatadata_in_s3(manifest_s3_url, s3_bucket)
+            download_metadata_in_s3(manifest_s3_url, s3_bucket)
             
         tsv_files = [os.path.join(dir, f) for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f)) 
                     and (f.endswith('.tsv') or f.endswith('.txt')) and f != manifest_file] 
