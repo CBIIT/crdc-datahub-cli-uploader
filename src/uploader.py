@@ -114,9 +114,7 @@ def controller():
                     log.info("File uploading completed!")
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
-                        process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)  
-                        # insert file_id to child tsv files
-                        insert_file_id_2_children(configs, validator.manifest_rows, validator.from_s3, s3_manifest_url)
+                        process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names, s3_manifest_url)  
                 # stop heartbeat after uploading completed
                 if upload_heart_beater:
                     upload_heart_beater.stop()

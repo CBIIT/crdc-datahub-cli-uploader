@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, DCF_PREFIX, BATCH_CREATED,\
     FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX,\
-    TEMP_DOWNLOAD_DIR
+    TEMP_DOWNLOAD_DIR, FROM_S3
 from common.graphql_client import APIInvoker
 from copier import Copier
 from common.s3util import S3Bucket
@@ -11,7 +11,7 @@ from common.s3util import S3Bucket
 SEPARATOR_CHAR = '\t'
 UTF8_ENCODE ='utf8'
 NODE_TYPE_NAME = 'type'
-def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, manifest_columns):
+def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, manifest_columns, manifest_s3_url):
     """
     function: process_manifest_file
     params:
@@ -41,22 +41,22 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
     result = None
     newBatch = None
     manifest_file_info = None
+    final_file_path_list = []
+    file_array = []
     try:
         if not has_file_id:
             result = add_file_id(file_id_name, file_name_name, final_manifest_path , file_infos, manifest_rows, manifest_columns, configs.get(OMIT_DCF_PREFIX))
             if not result:
                 log.info(f"Failed to add file id to the pre-manifest, {final_manifest_path }.")
                 return False
-        # create a batch for upload the final manifest file
-        manifest_file_size = os.path.getsize(final_manifest_path)
-        manifest_file_info = {"fileName": final_manifest_path, "size": manifest_file_size} 
+        
         configs[UPLOAD_TYPE] = "metadata"
-        # add file_id into child tsv files
+        final_file_path_list = [final_manifest_path]
+        # insert file id into children tsv files.
+        insert_file_id_2_children(configs, manifest_rows, final_file_path_list, manifest_s3_url)
+        file_array = [os.path.basename(file_path) for file_path in final_file_path_list]
+        # create a batch for upload the final manifest file
         apiInvoker = APIInvoker(configs)
-        final_manifest_name = os.path.basename(final_manifest_path)
-        #file_array = [{"fileName": final_manifest_name, "size": manifest_file_size}]
-        file_array = [final_manifest_name]
-        newBatch = None
         if apiInvoker.create_batch(file_array):
             newBatch = apiInvoker.new_batch
             if not newBatch.get(BATCH_BUCKET) or not newBatch[FILE_PREFIX] or not newBatch.get(BATCH_ID):
@@ -67,23 +67,25 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
             configs[BATCH_ID] = newBatch.get(BATCH_ID)
             log.info(f"New batch is created: {newBatch.get(BATCH_ID)} at {newBatch[BATCH_CREATED]}")
             uploader = Copier(configs[S3_BUCKET], configs[FILE_PREFIX] , configs)
-            result = uploader.copy_file({FILE_NAME_DEFAULT: final_manifest_name, FILE_PATH: final_manifest_path, FILE_SIZE_DEFAULT: manifest_file_size}, True, False)  
-            log.info(f'The manifest, "{final_manifest_name}" has been uploaded to destination successfully.')
+            for file_path in final_file_path_list:
+                result = uploader.copy_file({FILE_NAME_DEFAULT: os.path.basename(file_path), FILE_PATH: file_path, FILE_SIZE_DEFAULT: os.path.getsize(file_path)}, True, False)  
+            log.info(f'The manifest and final metadata files, {file_array}, have been uploaded to destination successfully.')
     except Exception as e:
         log.info(f"Failed to add file id to the pre-manifest, {file_path}. Error: {e}") 
     finally:
         if not newBatch or not result:
-            log.info(f"Failed process the manifest, {final_manifest_path}.")
+            log.info(f"Failed process the manifest and final metadata files, {file_array}.")
             return False
         else:
             # update batch
             status = result.get(BATCH_STATUS, False)
-            errors = [f"Failed to upload manifest file,{final_manifest_name}"] if not status else []
-            manifest_file_info = {"fileName": final_manifest_name, "succeeded": status, "errors": errors, "skipped": False}
-            if not apiInvoker.update_batch(newBatch[BATCH_ID], [manifest_file_info]):
+            errors = [f"Failed to upload manifest and final metadata files,{file_array}"] if not status else []
+            # manifest_file_info = {"fileName": final_manifest_name, "succeeded": status, "errors": errors, "skipped": False}
+            final_file_info_list  = [ {"fileName": os.path.basename(file_path), "succeeded": status, "errors": errors, "skipped": False} for file_path in final_file_path_list]
+            if not apiInvoker.update_batch(newBatch[BATCH_ID], final_file_info_list):
                 log.info(f"Failed to update batch, {newBatch[BATCH_ID]}!")
                 return False
-            log.info(f"Successfully process the manifest, {final_manifest_path}.")
+            log.info(f"Successfully process the manifest and added file id into children tsv files, {file_array}.")
         return True
 
 # This method will create a new manifest file with the file id column added to the pre-manifest.
@@ -101,9 +103,10 @@ def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, m
     return True
 
 # insert file node ID into relationship data fiels in children's metadata file.
-def insert_file_id_2_children(configs, manifest_rows, is_s3, manifest_s3_url):
+def insert_file_id_2_children(configs, manifest_rows, final_file_path_list, manifest_s3_url):
      # check if any tsv files in the dir of manifest file
     manifest_file = configs.get(PRE_MANIFEST)
+    is_s3 = configs.get(FROM_S3, False)
     dir = os.path.dirname(manifest_file) if not is_s3 else TEMP_DOWNLOAD_DIR
     s3_bucket = None
     try:
@@ -144,9 +147,7 @@ def insert_file_id_2_children(configs, manifest_rows, is_s3, manifest_s3_url):
                             file_ext = '.tsv' if file.endswith('.tsv') else '.txt'
                             final_file_path = file.replace(file_ext, f'-final{file_ext}')
                             df.to_csv(final_file_path, sep ='\t', index=False)
-                            if is_s3:
-                                # upload final metadata file into s3
-                                upload_metadata_to_s3(manifest_s3_url, final_file_path, s3_bucket)
+                            final_file_path_list.append(final_file_path)
     finally:
         if s3_bucket:
             s3_bucket = None
