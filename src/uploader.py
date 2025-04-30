@@ -7,13 +7,13 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, CURRENT_UPLOADER_VERSION_CONFIG
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, CURRENT_UPLOADER_VERSION_CONFIG, PRE_MANIFEST
 from common.graphql_client import APIInvoker
-from common.utils import dump_dict_to_tsv, get_exception_msg, compare_version
+from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
 from file_validator import FileValidator
 from file_uploader import FileUploader
-from process_manifest import process_manifest_file
+from process_manifest import process_manifest_file, insert_file_id_2_children
 from common.upload_heart_beater import UploadHeartBeater
 
 if LOG_PREFIX not in os.environ:
@@ -44,6 +44,7 @@ def controller():
         log.info("Failed to upload files: invalid parameter(s)!  Please check log file in tmp folder for details.")
         return 1
     configs = config.data
+    s3_manifest_url = configs[PRE_MANIFEST] if configs.get(PRE_MANIFEST) and configs[PRE_MANIFEST].startswith("s3://") else None
     #step 2: validate file or metadata
     apiInvoker = APIInvoker(configs)
     # get data file config
@@ -66,7 +67,6 @@ def controller():
         return 1
     
     file_list = validator.fileList
-
     if validator.invalid_count == 0:
         #step 3: create a batch
         # file_array = [{"fileName": item[FILE_NAME_DEFAULT], "size": item[FILE_SIZE_DEFAULT]} for item in file_list]
@@ -114,7 +114,7 @@ def controller():
                     log.info("File uploading completed!")
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
-                        process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)  
+                        process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names, s3_manifest_url)  
                 # stop heartbeat after uploading completed
                 if upload_heart_beater:
                     upload_heart_beater.stop()

@@ -141,6 +141,25 @@ class S3Bucket:
             self.log.error(e)
             return False, msg
         
+    # get contents info from s3 folder
+    def get_contents(self, prefix):
+        contents = []
+        try:
+            for obj in self.bucket.objects.filter(Prefix=prefix):
+                # key end with ".tsv" or ".txt"
+                if obj.key[-4:] == ".tsv" or obj.key[-4:] == ".txt":
+                    contents.append(obj.key)        
+        except Exception as e:
+            self.log.error("Failed to retrieve metadata file info")
+        finally:
+            return contents
+    
+    def put_file(self, s3_key, file_path):
+        try:
+            self.client.upload_file(file_path, self.bucket_name, s3_key)
+        except Exception as e:
+            self.log.error("Failed to upload file.")
+
     def close(self):
         self.client.close()
         self.client = None
