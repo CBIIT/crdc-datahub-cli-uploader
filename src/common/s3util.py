@@ -77,7 +77,6 @@ class S3Bucket:
                     self.bucket.put_object(
                         Key=key,
                         Body=chunk,
-                        ContentMD5=md5_base64,
                         ACL=BUCKET_OWNER_ACL,
                     )
                     uploaded_bytes += len(chunk)  # Track uploaded bytes
