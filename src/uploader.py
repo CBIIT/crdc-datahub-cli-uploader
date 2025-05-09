@@ -7,13 +7,13 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, CURRENT_UPLOADER_VERSION_CONFIG, PRE_MANIFEST
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
 from file_validator import FileValidator
 from file_uploader import FileUploader
-from process_manifest import process_manifest_file, insert_file_id_2_children
+from process_manifest import process_manifest_file
 from common.upload_heart_beater import UploadHeartBeater
 
 if LOG_PREFIX not in os.environ:
