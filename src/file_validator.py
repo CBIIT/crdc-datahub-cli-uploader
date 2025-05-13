@@ -2,6 +2,7 @@
 import csv
 import os
 import glob
+import re
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
     FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT
@@ -87,6 +88,10 @@ class FileValidator:
         line_num = 1
         total_file_cnt = len(self.files_info)
         self.log.info(f'Start to validate data files...')
+        # validate file name
+        is_valid = self.validate_file_name()
+        if not is_valid:
+            return False
         for info in self.files_info:
             line_num += 1
             invalid_reason = ""
@@ -95,6 +100,15 @@ class FileValidator:
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
+            file_name = info.get(FILE_NAME_DEFAULT)
+            # validate file name
+            is_valid, msg = self.validate_file_name(file_name)
+            if not is_valid:
+                invalid_reason += f"Line {line_num}: {msg}"
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.invalid_count += 1
+                self.log.error(invalid_reason)
+                continue
             if not self.from_s3: # only validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
                 if result:
@@ -132,9 +146,43 @@ class FileValidator:
         # save md5 cache to file
         if not self.from_s3:
             dump_data_to_csv(self.md5_cache, self.md5_cache_file)
-        "Validating file integrity succeeded"
         return True
     
+    # validate file name listed manifest
+    def validate_file_name(self):
+        msg = None
+        is_valid = True
+        line_num = 2
+        file_name_config = self.configs.get(FILE_NAME_FIELD)
+        self.log.info("Start validating file names listed in pre-manifest:")
+        for row in self.manifest_rows:
+            file_name = row[file_name_config]
+            if not file_name or not file_name.strip():
+                msg = f"Line {line_num}: File name is empty!"
+                is_valid = False
+                self.log.error(msg)
+            # check if file name is unique by count the file name
+            temp_list  = [file for file in self.manifest_rows if file[file_name_config] == file_name]
+            if len(temp_list) > 1:
+                msg = f"Line {line_num}: File name {file_name} is not unique in the manifest!"
+                is_valid = False
+                self.log.error(msg)
+        
+            # check if file name only contain ASCII characters
+            if not file_name.isascii():
+                msg = f"Line {line_num}: File name {file_name} contains non-ASCII characters!"
+                is_valid = False
+                self.log.error(msg)
+        
+            # check if file name contains reserved or illegal characters, /, \, :, *, ?, ", <, >, and |
+            if re.search(r'[\/\\:*?"<>|]', file_name):
+                msg = f"Line {line_num}: File name {file_name} contains invalid characters!"
+                is_valid = False
+                self.log.error(msg)
+            line_num += 1
+        self.log.info("Completed validating file names listed in pre-manifest:")
+        return is_valid
+
     #public function to read pre-manifest and return list of file records 
     def read_manifest(self):
         files_info = []
@@ -166,7 +214,7 @@ class FileValidator:
                 if s3_bucket:
                     s3_bucket.close()
         try:
-            with open(self.pre_manifest) as pre_m:
+            with open(self.pre_manifest, mode='r', encoding='utf-8') as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
                 if not self.field_names:
                     self.field_names = clean_up_strs(reader.fieldnames)
@@ -185,9 +233,15 @@ class FileValidator:
                     }})
             files_info  =  list(files_dict.values())
             self.manifest_rows = manifest_rows
+
+        except UnicodeDecodeError as ue:
+            # self.log.debug(ue)
+            self.log.exception(f"Reading manifest failed - manifest file contains non-ASCII characters.")
+            return []
         except Exception as e:
-            self.log.debug(e)
+            # self.log.debug(e)
             self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
+            return []
         return files_info
     """
     validate file id format
