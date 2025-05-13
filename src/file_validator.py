@@ -89,8 +89,7 @@ class FileValidator:
         total_file_cnt = len(self.files_info)
         self.log.info(f'Start to validate data files...')
         # validate file name
-        is_valid = self.validate_file_name()
-        if not is_valid:
+        if not self.validate_file_name():
             return False
         for info in self.files_info:
             line_num += 1
@@ -100,15 +99,6 @@ class FileValidator:
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
-            file_name = info.get(FILE_NAME_DEFAULT)
-            # validate file name
-            is_valid, msg = self.validate_file_name(file_name)
-            if not is_valid:
-                invalid_reason += f"Line {line_num}: {msg}"
-                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
-                self.invalid_count += 1
-                self.log.error(invalid_reason)
-                continue
             if not self.from_s3: # only validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
                 if result:
