@@ -170,7 +170,7 @@ class FileValidator:
                 is_valid = False
                 self.log.error(msg)
             line_num += 1
-        self.log.info("Completed validating file names listed in pre-manifest:")
+        self.log.info("Completed validating file names listed in pre-manifest.")
         return is_valid
 
     #public function to read pre-manifest and return list of file records 
