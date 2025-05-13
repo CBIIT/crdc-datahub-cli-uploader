@@ -7,13 +7,13 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, CURRENT_UPLOADER_VERSION_CONFIG, PRE_MANIFEST
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
 from file_validator import FileValidator
 from file_uploader import FileUploader
-from process_manifest import process_manifest_file, insert_file_id_2_children
+from process_manifest import process_manifest_file
 from common.upload_heart_beater import UploadHeartBeater
 
 if LOG_PREFIX not in os.environ:
@@ -47,18 +47,17 @@ def controller():
     s3_manifest_url = configs[PRE_MANIFEST] if configs.get(PRE_MANIFEST) and configs[PRE_MANIFEST].startswith("s3://") else None
     #step 2: validate file or metadata
     apiInvoker = APIInvoker(configs)
-    # get data file config
-    if configs[UPLOAD_TYPE] == TYPE_FILE:
-         # retrieve data file configuration
-        result, data_file_config = apiInvoker.get_data_file_config(configs["submission"])
-        if not result or not data_file_config:
-            log.error("Failed to upload files: can't get data file config!")
-            log.info("Failed to upload files: can't get data file config! Please check log file in tmp folder for details.")
-            return 1
-        if not config.validate_file_config(data_file_config):
-            log.error("Failed to upload files: invalid file config!")
-            log.info("Failed to upload files: invalid file config! Please check log file in tmp folder for details.")
-            return 1
+    # get data file config and heartbeat config
+    # retrieve data file configuration
+    result, data_file_config = apiInvoker.get_data_file_config(configs["submission"])
+    if not result or not data_file_config:
+        log.error("Failed to upload files: can't get data file config!")
+        log.info("Failed to upload files: can't get data file config! Please check log file in tmp folder for details.")
+        return 1
+    if not config.validate_file_config(data_file_config):
+        log.error("Failed to upload files: invalid file config!")
+        log.info("Failed to upload files: invalid file config! Please check log file in tmp folder for details.")
+        return 1
 
     validator = FileValidator(configs)
     if not validator.validate():
@@ -69,7 +68,6 @@ def controller():
     file_list = validator.fileList
     if validator.invalid_count == 0:
         #step 3: create a batch
-        # file_array = [{"fileName": item[FILE_NAME_DEFAULT], "size": item[FILE_SIZE_DEFAULT]} for item in file_list]
         file_array = [ item[FILE_NAME_DEFAULT] for item in file_list]
         newBatch = None
         if apiInvoker.create_batch(file_array):
@@ -100,7 +98,7 @@ def controller():
             #step 5: upload all files to designated s3 bucket
             loader = FileUploader(configs, file_list, validator.md5_cache, validator.md5_cache_file)
             # create upload heart beater instance
-            upload_heart_beater = UploadHeartBeater(configs[BATCH_ID], apiInvoker, configs[HEARTBEAT_INTERVAL_CONFIG]) if configs[UPLOAD_TYPE] == TYPE_FILE else None
+            upload_heart_beater = UploadHeartBeater(configs[BATCH_ID], apiInvoker, configs[HEARTBEAT_INTERVAL_CONFIG])
             try:
                 # start heart beater right before uploading files
                 if upload_heart_beater:
@@ -125,11 +123,11 @@ def controller():
                 if upload_heart_beater:
                     upload_heart_beater.stop()
                     upload_heart_beater = None
-                error = 'File uploading is interrupted.'    
+                error = 'Uploading is interrupted.'    
                 log.info(error)
                 for item in file_list:
                     if not item.get(SUCCEEDED, False):
-                        item[ERRORS] = item[ERRORS].append(error) if item[ERRORS] else [error]
+                        item[ERRORS] = item[ERRORS].append(error) if item.get(ERRORS) else [error]
                         item[SUCCEEDED] = False
             finally:
                 #set fileList for update batch
