@@ -144,6 +144,7 @@ class FileValidator:
         is_valid = True
         line_num = 2
         file_name_config = self.configs.get(FILE_NAME_FIELD)
+        file_id_config = self.configs.get(FILE_ID_FIELD)
         self.log.info("Start validating file names listed in pre-manifest:")
         for row in self.manifest_rows:
             file_name = row[file_name_config]
@@ -151,9 +152,10 @@ class FileValidator:
                 msg = f"Line {line_num}: File name is empty!"
                 is_valid = False
                 self.log.error(msg)
+            file_id = row[file_id_config]
             # check if file name is unique by count the file name
-            temp_list  = [file for file in self.manifest_rows if file[file_name_config] == file_name]
-            if len(temp_list) > 1:
+            same_file_name_list  = [file for file in self.manifest_rows if file[file_name_config] == file_name and file[file_id_config] != file_id]
+            if len(same_file_name_list) > 1:
                 msg = f"Line {line_num}: File name {file_name} is not unique in the manifest!"
                 is_valid = False
                 self.log.error(msg)
