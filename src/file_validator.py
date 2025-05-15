@@ -155,7 +155,7 @@ class FileValidator:
             file_id = row[file_id_config]
             # check if file name is unique by count the file name
             same_file_name_list  = [file for file in self.manifest_rows if file[file_name_config] == file_name and file[file_id_config] != file_id]
-            if len(same_file_name_list) > 1:
+            if len(same_file_name_list) > 0:
                 msg = f"Line {line_num}: File name {file_name} is not unique in the manifest!"
                 is_valid = False
                 self.log.error(msg)
