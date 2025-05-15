@@ -53,7 +53,7 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
         configs[UPLOAD_TYPE] = "metadata"
         final_file_path_list = [final_manifest_path]
         # insert file id into children tsv files.
-        insert_file_id_2_children(configs, manifest_rows, final_file_path_list, manifest_s3_url)
+        insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list, manifest_s3_url)
         file_array = [os.path.basename(file_path) for file_path in final_file_path_list]
         # create a batch for upload the final manifest file
         apiInvoker = APIInvoker(configs)
