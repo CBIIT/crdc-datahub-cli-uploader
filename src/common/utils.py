@@ -24,7 +24,7 @@ Removes leading and trailing spaces from header names
 """
 def clean_up_strs(str_arr):
        
-    return [item.strip() for item in str_arr]
+    return [item.strip() if item else "" for item in str_arr ]
 
 """
 Extract exception type name and message
