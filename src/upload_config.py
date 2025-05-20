@@ -109,6 +109,8 @@ class Config():
                     self.log.critical(f'Please provide “manifest” in configuration file or command line argument.')
                     return False
                 if not manifest.startswith(S3_START):
+                    if not "/" in manifest or not "\\" in manifest:  # user only put file name but not path
+                        manifest = os.path.join("./", manifest)
                     if not os.path.isfile(manifest): 
                         self.log.critical(f'Manifest file “{manifest}” is not readable. Please make sure the path is correct and the file is readable.')
                         return False

@@ -53,7 +53,7 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
         configs[UPLOAD_TYPE] = "metadata"
         final_file_path_list = [final_manifest_path]
         # insert file id into children tsv files.
-        insert_file_id_2_children(configs, manifest_rows, final_file_path_list, manifest_s3_url)
+        insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list, manifest_s3_url)
         file_array = [os.path.basename(file_path) for file_path in final_file_path_list]
         # create a batch for upload the final manifest file
         apiInvoker = APIInvoker(configs)
@@ -103,7 +103,7 @@ def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, m
     return True
 
 # insert file node ID into relationship data fiels in children's metadata file.
-def insert_file_id_2_children(configs, manifest_rows, final_file_path_list, manifest_s3_url):
+def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list, manifest_s3_url):
      # check if any tsv files in the dir of manifest file
     manifest_file = configs.get(PRE_MANIFEST)
     is_s3 = configs.get(FROM_S3, False)
@@ -148,6 +148,8 @@ def insert_file_id_2_children(configs, manifest_rows, final_file_path_list, mani
                             final_file_path = file.replace(file_ext, f'-final{file_ext}')
                             df.to_csv(final_file_path, sep ='\t', index=False)
                             final_file_path_list.append(final_file_path)
+    except Exception as e:
+        log.exception(f"Failed to insert file id into children tsv files. Error: {e}")
     finally:
         if s3_bucket:
             s3_bucket = None
