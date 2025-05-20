@@ -116,7 +116,7 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
             download_meatadata_in_s3(manifest_s3_url, s3_bucket)
             
         tsv_files = [os.path.join(dir, f) for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f)) 
-                    and (f.endswith('.tsv') or f.endswith('.txt')) and f not in manifest_file and not "-final." in f] 
+                    and (f.endswith('.tsv') or f.endswith('.txt')) and f not in manifest_file and not "-final." in f]
         file_type = manifest_rows[0].get(NODE_TYPE_NAME) 
         if file_type:
             file_id_to_check = f"{file_type}.{configs.get(FILE_ID_FIELD)}"
