@@ -102,11 +102,11 @@ class FileUploader:
                 file_count += 1 
                 job[self.TTL] -= 1
                 if self.from_s3 == True: #download file from s3
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
                     result = self.prepare_s3_download_file(file_info, file_count, self.total_file_count)
                     if not result:
-                        if os.path.exists(file_path):
-                            os.remove(file_path)
-                        continue
+                        return False
                 self.files_processed += 1
                 result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
                 if result.get(Copier.STATUS):
