@@ -65,13 +65,9 @@ class FileUploader:
     """
     def _prepare_files(self):
         files = []
-        file_count = 0
-        total_file_count = len(self.file_info_list)
+        self.total_file_count = len(self.file_info_list)
         for info in self.file_info_list:
-            file_count += 1
             self.total_file_volume += int(info[FILE_SIZE_DEFAULT])
-            if self.from_s3 == True: #download file from s3
-               self.prepare_s3_download_file(info, file_count, total_file_count)
             files.append({
                 self.TTL: self.retry,
                 self.INFO: info,
@@ -92,18 +88,25 @@ class FileUploader:
         if self.invalid_count > 0:
             self.log.info(f"{self.invalid_count} files are invalid and uploading skipped!")
             return False
-        
         self.copier = Copier(self.bucket_name, self.prefix, self.configs)
         file_queue = deque(upload_file_list)
         uploaded_file_volume = 0
         self.print_start_upload_message(self.count, self.total_file_volume)
         start_uploading_at = datetime.now()
+        file_count = 0
         try:
             while file_queue:
                 job = file_queue.popleft()
                 file_info = job[self.INFO]
                 file_path = file_info[FILE_PATH]
+                file_count += 1 
                 job[self.TTL] -= 1
+                if self.from_s3 == True: #download file from s3
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    result = self.prepare_s3_download_file(file_info, file_count, self.total_file_count)
+                    if not result:
+                        return False
                 self.files_processed += 1
                 result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
                 if result.get(Copier.STATUS):
@@ -113,6 +116,8 @@ class FileUploader:
                         os.remove(file_path)
                 else:
                     self._deal_with_failed_file(job, file_queue)
+                    if job[self.TTL]  > 0:
+                        file_count -= 1
 
                 uploaded_file_volume += file_info[FILE_SIZE_DEFAULT]
                 
