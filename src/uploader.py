@@ -123,7 +123,7 @@ def controller():
                 if upload_heart_beater:
                     upload_heart_beater.stop()
                     upload_heart_beater = None
-                error = 'Uploading is interrupted.'    
+                error = 'File uploading is interrupted.'
                 log.info(error)
                 for item in file_list:
                     if not item.get(SUCCEEDED, False):
