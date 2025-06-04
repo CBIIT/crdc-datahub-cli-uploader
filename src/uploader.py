@@ -129,7 +129,10 @@ def controller():
                 log.info(error)
                 for item in file_list:
                     if not item.get(SUCCEEDED, False):
-                        item[ERRORS] = item[ERRORS].append(error) if item[ERRORS] else [error]
+                        if ERRORS in item and item[ERRORS]:
+                            item[ERRORS].append(error)
+                        else:
+                            item[ERRORS] = [error]
                         item[SUCCEEDED] = False
             finally:
                 #set fileList for update batch
