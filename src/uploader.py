@@ -7,7 +7,7 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST, TEMP_DOWNLOAD_DIR
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
@@ -139,6 +139,10 @@ def controller():
                 else:
                     log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
                     log.info(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
+                if s3_manifest_url:
+                    # remove files in tmp folder under tmp folder, TEMP_DOWNLOAD_DIR
+                    os.system(f"rm -rf {TEMP_DOWNLOAD_DIR}/*")
+
     else:
         log.error(f"Found total {validator.invalid_count} file(s) are invalid!")
     
