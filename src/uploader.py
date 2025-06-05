@@ -139,11 +139,6 @@ def controller():
                 else:
                     log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
                     log.info(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
-                if s3_manifest_url:
-                    # remove files in tmp folder under tmp folder, TEMP_DOWNLOAD_DIR
-                    if os.path.exists(TEMP_DOWNLOAD_DIR):
-                        shutil.rmtree(TEMP_DOWNLOAD_DIR)
-                        os.makedirs(TEMP_DOWNLOAD_DIR, exist_ok=True)
 
     else:
         log.error(f"Found total {validator.invalid_count} file(s) are invalid!")
