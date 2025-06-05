@@ -148,6 +148,10 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
                             final_file_path = file.replace(file_ext, f'-final{file_ext}')
                             df.to_csv(final_file_path, sep ='\t', index=False)
                             final_file_path_list.append(final_file_path)
+                        else:
+                            # remove the file if in temp dir
+                            if is_s3:
+                                os.remove(file)
     except Exception as e:
         log.exception(f"Failed to insert file id into children tsv files. Error: {e}")
     finally:
