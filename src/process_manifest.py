@@ -1,6 +1,5 @@
-import csv, os, io
+import csv, os
 import pandas as pd
-import numpy as np
 from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, DCF_PREFIX, BATCH_CREATED,\
     FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX,\
     TEMP_DOWNLOAD_DIR, FROM_S3, SUBFOLDER_FILE_NAME
@@ -43,7 +42,6 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
     manifest_columns.append(file_id_name)
     result = None
     newBatch = None
-    manifest_file_info = None
     final_file_path_list = []
     file_array = []
     try:
@@ -91,7 +89,7 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
             log.info(f"Successfully process the manifest and added file id into children tsv files, {file_array}.")
         return True
 
-# This method will create a new manifest file with the file id column added to the pre-manifest.
+# This method will create a new manifest file with the file id column added to the pre-manifest and internal_file_name.
 def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, manifest_rows, manifest_columns, omit_prefix):
     output = []
     for row in manifest_rows:
@@ -186,7 +184,7 @@ def upload_metadata_to_s3(manifest_file_path, file_path, s3_bucket):
 get bucket and prefix from manifest file path
 """
 def get_s3_bucket_and_prefix(manifest_file_path):
-     #  s3://crdcdh-test-submission/9f42b5f1-5ea4-4923-a9bb-f496c63362ce/file/file.txt
+    # manifest_file_path eg. s3://crdcdh-test-submission/9f42b5f1-5ea4-4923-a9bb-f496c63362ce/file/file.txt
     manifest_file_path = manifest_file_path.replace("s3://", "")
     temp = manifest_file_path.split("/")
     bucket = temp[0]
