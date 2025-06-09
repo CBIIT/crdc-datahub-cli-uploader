@@ -114,7 +114,7 @@ def controller():
                     log.info("File uploading completed!")
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
-                        process_manifest_file(log, configs.copy(), validator.has_file_id, newBatch["files"], validator.manifest_rows, validator.field_names)  
+                        process_manifest_file(log, configs.copy(), validator.has_file_id, file_list, validator.manifest_rows, validator.field_names)  
                 # stop heartbeat after uploading completed
                 if upload_heart_beater:
                     upload_heart_beater.stop()

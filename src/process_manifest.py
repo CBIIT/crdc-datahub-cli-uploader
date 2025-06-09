@@ -1,6 +1,6 @@
 import csv, os, io
 from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, DCF_PREFIX, BATCH_CREATED,\
-    FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX
+    FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX, SUBFOLDER_FILE_NAME
 from common.graphql_client import APIInvoker
 from copier import Copier
 
@@ -27,11 +27,17 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
     if not file_infos or len(file_infos) == 0:
         log.info(f"Failed to add file id to the pre-manifest, {file_path}.")
         return False
+    # check if file in file_infos has SUBFOLDER_FILE_NAME
+    hasSubFolder = any(SUBFOLDER_FILE_NAME in d for d in file_infos)
+    needFinalManifest = hasSubFolder or (not has_file_id)
     file_path = configs.get(PRE_MANIFEST)
-    final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if not has_file_id else file_path
+    final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if needFinalManifest else file_path
     file_id_name = configs[FILE_ID_FIELD]
     file_name_name = configs[FILE_NAME_FIELD]
-    manifest_columns.append(file_id_name)
+    if not has_file_id:
+        manifest_columns.append(file_id_name)
+    if hasSubFolder:
+        manifest_columns.append(SUBFOLDER_FILE_NAME)
     result = None
     newBatch = None
     manifest_file_info = None
@@ -41,6 +47,7 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
             if not result:
                 log.info(f"Failed to add file id to the pre-manifest, {final_manifest_path }.")
                 return False
+        # update
         # create a batch for upload the final manifest file
         manifest_file_size = os.path.getsize(final_manifest_path)
         manifest_file_info = {"fileName": final_manifest_path, "size": manifest_file_size} 
@@ -83,9 +90,11 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
 def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, manifest_rows, manifest_columns, omit_prefix):
     output = []
     for row in manifest_rows:
-        file = [file for file in file_infos if file["fileName"] == row[file_name_name]][0]
+        file = [file for file in file_infos if file[FILE_NAME_DEFAULT] == row[file_name_name]][0]
         file[FILE_ID_DEFAULT] = file[FILE_ID_DEFAULT] if omit_prefix == False else file[FILE_ID_DEFAULT].replace(DCF_PREFIX, "")
         row[file_id_name] = file[FILE_ID_DEFAULT]
+        row[file_name_name] = os.path.basename(file[FILE_NAME_DEFAULT])
+        row[SUBFOLDER_FILE_NAME] = file[SUBFOLDER_FILE_NAME] if SUBFOLDER_FILE_NAME in file else ""
         output.append(row.values())
     with open(final_manifest_path, 'w', newline='') as f: 
         writer = csv.writer(f, delimiter='\t')

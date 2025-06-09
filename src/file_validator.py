@@ -4,10 +4,9 @@ import os
 import glob
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT
-from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME
 from bento.common.utils import get_logger
-from common.utils import extract_s3_info_from_url, dump_data_to_csv
+from common.utils import extract_s3_info_from_url, dump_data_to_csv, is_valid_uuid, clean_up_strs, clean_up_key_value
 from common.s3util import S3Bucket
 from common.md5_calculator import calculate_file_md5
 
@@ -95,6 +94,14 @@ class FileValidator:
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
+            # validate file name
+            result, msg = self.validate_file_name(info.get(FILE_NAME_DEFAULT), line_num, info)
+            if not result:
+                invalid_reason += msg
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.invalid_count += 1
+                self.log.error(invalid_reason)
+                continue
             if not self.from_s3: # only validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
                 if result:
@@ -103,7 +110,6 @@ class FileValidator:
                 if not result:
                     self.invalid_count += 1
                     continue
-                
             else: # check file existing and validate file size in s3 bucket
                 s3_file_size, msg = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
                 if not s3_file_size:
@@ -129,7 +135,7 @@ class FileValidator:
                 self.log.error(invalid_reason)
                 continue
 
-            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None})
+            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None, SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)})
         # save md5 cache to file
         if not self.from_s3:
             dump_data_to_csv(self.md5_cache, self.md5_cache_file)
@@ -219,6 +225,21 @@ class FileValidator:
                 # self.log.error(msg)
                 return False, msg
                 
+        return True, None
+    
+    def validate_file_name(self, file_name, line_num, file_info):
+        if not file_name:
+            msg = f'Line {line_num}: File name is required but not provided. Please provide a valid file name.'
+            self.log.error(msg)
+            return False, msg
+        # check file name is a absolute path
+        if os.path.isabs(file_name):
+            msg = f'Line {line_num}: File name "{file_name}" is not a valid file name. Please provide a valid file name.'
+            self.log.error(msg)
+            return False, msg
+        # check if file name contains / and or \ set internal_file_name to file_info with file_name with replace by _
+        if '/' in file_name or '\\' in file_name:
+            file_info[SUBFOLDER_FILE_NAME] = file_name.replace('/', '_').replace('\\', '_')
         return True, None
     
     def load_md5_cache(self):
