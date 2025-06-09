@@ -8,7 +8,7 @@ from common.progress_bar import create_progress_bar, ProgressCallback
 from common.graphql_client import APIInvoker
 from common.s3util import S3Bucket
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, \
-    ERRORS, SKIPPED
+    ERRORS, SKIPPED, SUBFOLDER_FILE_NAME
 from common.utils import get_exception_msg
 class Copier:
 
@@ -77,7 +77,7 @@ class Copier:
         """
         try:
             org_url = file_info[FILE_PATH]
-            file_name = file_info[FILE_NAME_DEFAULT]
+            file_name = file_info[FILE_NAME_DEFAULT] if not file_info.get(SUBFOLDER_FILE_NAME) else file_info[SUBFOLDER_FILE_NAME]
             self.log.info(f'Processing {org_url}')
             key = f'{self.prefix}/{file_name}'
             org_size = file_info[FILE_SIZE_DEFAULT]
