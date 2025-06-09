@@ -129,6 +129,10 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
                         header = next(reader)  # get the first row
                         if file_id_to_check in header:
                             children_files.append(file)
+                        else:
+                            # remove the file if in temp dir
+                            if is_s3:
+                                os.remove(file)
             if len(children_files) > 0:
                 for file in children_files:
                     inserted = False
