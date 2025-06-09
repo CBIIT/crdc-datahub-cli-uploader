@@ -138,7 +138,6 @@ def controller():
                 else:
                     log.error(f"Failed to update batch, {newBatch[BATCH_ID]}!")
                     log.info(f"Failed to update batch, {newBatch[BATCH_ID]}! Please check log file in tmp folder for details.")
-
     else:
         log.error(f"Found total {validator.invalid_count} file(s) are invalid!")
     
