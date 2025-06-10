@@ -7,7 +7,7 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST, FILE_ID_DEFAULT
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
@@ -112,6 +112,10 @@ def controller():
                     log.info("File uploading completed!")
                     if configs[UPLOAD_TYPE] == TYPE_FILE:
                         # process manifest file
+                        if not validator.has_file_id:
+                            # set file id to file_list
+                            for i, file_info in enumerate(newBatch["files"]):
+                                file_list[i][FILE_ID_DEFAULT] = file_info.get(FILE_ID_DEFAULT)
                         process_manifest_file(log, configs.copy(), validator.has_file_id, file_list, validator.manifest_rows, validator.field_names, s3_manifest_url)  
                 # stop heartbeat after uploading completed
                 if upload_heart_beater:
