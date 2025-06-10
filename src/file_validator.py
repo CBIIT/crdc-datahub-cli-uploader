@@ -172,7 +172,7 @@ class FileValidator:
 
             # check file name is a absolute path
             if os.path.isabs(file_name):
-                msg = f'Line {line_num}: File name "{file_name}" is invalid for being an absolute path!'
+                msg = f'Line {line_num}: File name "{file_name}" is invalid, no absolute path allowed!'
                 is_valid = False
                 self.log.error(msg)
 
