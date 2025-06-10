@@ -88,6 +88,10 @@ class FileValidator:
         line_num = 1
         total_file_cnt = len(self.files_info)
         self.log.info(f'Start to validate data files...')
+        # add warning if manifest include "internal_file_name" column
+        if SUBFOLDER_FILE_NAME in self.field_names:
+            msg = "internal_file_name column found in the manifest! Values in internal_file_name column will be replaced by system generated values"
+            self.log.warning(msg)
         # validate file name
         if not self.validate_file_name():
             return False
@@ -97,12 +101,13 @@ class FileValidator:
             file_name = info.get(FILE_NAME_DEFAULT)
             if '/' in file_name or '\\' in file_name:
                 info[SUBFOLDER_FILE_NAME] = file_name.replace('/', '_').replace('\\', '_')
+            else:
+                info[SUBFOLDER_FILE_NAME] = None
             file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, file_name)
             size = info.get(FILE_SIZE_DEFAULT)
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
-            
             if not self.from_s3: # only  validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
                 if result:

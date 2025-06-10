@@ -33,7 +33,7 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
         log.info(f"Failed to add file id to the pre-manifest, {file_path}.")
         return False
     # check if file in file_infos has SUBFOLDER_FILE_NAME
-    hasSubFolder = any(SUBFOLDER_FILE_NAME in d for d in file_infos)
+    hasSubFolder = any(d for d in file_infos if d.get(SUBFOLDER_FILE_NAME))
     needFinalManifest = hasSubFolder or (not has_file_id)
     file_path = configs.get(PRE_MANIFEST)
     final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if needFinalManifest else file_path
