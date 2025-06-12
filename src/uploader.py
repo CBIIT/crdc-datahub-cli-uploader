@@ -7,7 +7,7 @@ import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
 from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
-    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST, FILE_ID_DEFAULT
+    FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST, FILE_ID_DEFAULT, SUBFOLDER_FILE_NAME
 from common.graphql_client import APIInvoker
 from common.utils import dump_dict_to_tsv, get_exception_msg
 from upload_config import Config
@@ -68,7 +68,7 @@ def controller():
     file_list = validator.fileList
     if validator.invalid_count == 0:
         #step 3: create a batch
-        file_array = [ item[FILE_NAME_DEFAULT] for item in file_list]
+        file_array = [ item[SUBFOLDER_FILE_NAME] for item in file_list]
         newBatch = None
         if apiInvoker.create_batch(file_array):
             newBatch = apiInvoker.new_batch
