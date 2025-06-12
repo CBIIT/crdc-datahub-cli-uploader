@@ -102,7 +102,7 @@ class FileValidator:
             if '/' in file_name or '\\' in file_name:
                 info[SUBFOLDER_FILE_NAME] = file_name.replace('/', '_').replace('\\', '_')
             else:
-                info[SUBFOLDER_FILE_NAME] = None
+                info[SUBFOLDER_FILE_NAME] = file_name
             file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, file_name)
             size = info.get(FILE_SIZE_DEFAULT)
             size_info = 0 if not size or not size.isdigit() else int(size)
