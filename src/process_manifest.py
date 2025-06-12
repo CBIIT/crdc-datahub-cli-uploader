@@ -40,7 +40,8 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
     final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if needFinalManifest else file_path
     file_id_name = configs[FILE_ID_FIELD]
     file_name_name = configs[FILE_NAME_FIELD]
-    manifest_columns.append(file_id_name)
+    if not has_file_id:
+        manifest_columns.append(file_id_name)
     if hasSubFolder:
         manifest_columns.append(SUBFOLDER_FILE_NAME)
     result = None
