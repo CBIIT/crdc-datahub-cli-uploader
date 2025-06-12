@@ -42,8 +42,7 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
     file_name_name = configs[FILE_NAME_FIELD]
     if not has_file_id:
         manifest_columns.append(file_id_name)
-    if hasSubFolder:
-        manifest_columns.append(SUBFOLDER_FILE_NAME)
+    manifest_columns.append(SUBFOLDER_FILE_NAME)
     result = None
     newBatch = None
     final_file_path_list = []
