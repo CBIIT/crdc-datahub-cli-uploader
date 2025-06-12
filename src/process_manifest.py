@@ -34,12 +34,15 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
         return False
     # check if file in file_infos has SUBFOLDER_FILE_NAME
     hasSubFolder = any(d for d in file_infos if d.get(SUBFOLDER_FILE_NAME))
+    
     needFinalManifest = hasSubFolder or (not has_file_id)
     file_path = configs.get(PRE_MANIFEST)
     final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if needFinalManifest else file_path
     file_id_name = configs[FILE_ID_FIELD]
     file_name_name = configs[FILE_NAME_FIELD]
     manifest_columns.append(file_id_name)
+    if hasSubFolder:
+        manifest_columns.append(SUBFOLDER_FILE_NAME)
     result = None
     newBatch = None
     final_file_path_list = []
