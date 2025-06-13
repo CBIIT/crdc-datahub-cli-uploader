@@ -135,7 +135,7 @@ def controller():
                         item[SUCCEEDED] = False
             finally:
                 #set fileList for update batch
-                file_array = [{"fileName": item[FILE_NAME_DEFAULT], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED, False)} for item in file_list]
+                file_array = [{"fileName": item[SUBFOLDER_FILE_NAME], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED, False)} for item in file_list]
                 #step 6: update the batch
                 if apiInvoker.update_batch(newBatch[BATCH_ID], file_array):
                     batch = apiInvoker.batch
