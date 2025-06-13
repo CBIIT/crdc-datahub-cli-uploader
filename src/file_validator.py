@@ -5,7 +5,7 @@ import glob
 import re
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url, dump_data_to_csv
@@ -88,18 +88,27 @@ class FileValidator:
         line_num = 1
         total_file_cnt = len(self.files_info)
         self.log.info(f'Start to validate data files...')
+        # add warning if manifest include "internal_file_name" column
+        if SUBFOLDER_FILE_NAME in self.field_names:
+            msg = "internal_file_name column found in the manifest! Values in internal_file_name column will be replaced by system generated values"
+            self.log.warning(msg)
         # validate file name
         if not self.validate_file_name():
             return False
         for info in self.files_info:
             line_num += 1
             invalid_reason = ""
-            file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, info[FILE_NAME_DEFAULT])
+            file_name = info.get(FILE_NAME_DEFAULT)
+            if '/' in file_name or '\\' in file_name:
+                info[SUBFOLDER_FILE_NAME] = file_name.replace('/', '_').replace('\\', '_')
+            else:
+                info[SUBFOLDER_FILE_NAME] = file_name
+            file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, file_name)
             size = info.get(FILE_SIZE_DEFAULT)
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
-            if not self.from_s3: # only validate local data file
+            if not self.from_s3: # only  validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
                 if result:
                     self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
@@ -132,7 +141,7 @@ class FileValidator:
                 self.log.error(invalid_reason)
                 continue
 
-            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None})
+            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None, SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)})
         # save md5 cache to file
         if not self.from_s3:
             dump_data_to_csv(self.md5_cache, self.md5_cache_file)
@@ -165,12 +174,19 @@ class FileValidator:
                 msg = f"Line {line_num}: File name {file_name} contains non-ASCII characters!"
                 is_valid = False
                 self.log.error(msg)
-        
+
+            # check file name is a absolute path
+            if os.path.isabs(file_name):
+                msg = f'Line {line_num}: File name "{file_name}" is invalid, no absolute path allowed!'
+                is_valid = False
+                self.log.error(msg)
+
             # check if file name contains reserved or illegal characters, /, \, :, *, ?, ", <, >, and |
-            if re.search(r'[\/\\:*?"<>|]', file_name):
+            if re.search(r'[:*?"<>|]', file_name):
                 msg = f"Line {line_num}: File name {file_name} contains invalid characters!"
                 is_valid = False
                 self.log.error(msg)
+
             line_num += 1
         self.log.info("Completed validating file names listed in pre-manifest.")
         return is_valid
