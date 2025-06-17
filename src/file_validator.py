@@ -95,6 +95,7 @@ class FileValidator:
         # validate file name
         if not self.validate_file_name():
             return False
+        self.field_names.append(SUBFOLDER_FILE_NAME) # add subfolder file name to field names
         for info in self.files_info:
             line_num += 1
             invalid_reason = ""
@@ -103,7 +104,6 @@ class FileValidator:
                 info[SUBFOLDER_FILE_NAME] = file_name.replace('/', '_').replace('\\', '_')
             else:
                 info[SUBFOLDER_FILE_NAME] = file_name
-            self.field_names.append(SUBFOLDER_FILE_NAME) # add subfolder file name to field names
             file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, file_name)
             size = info.get(FILE_SIZE_DEFAULT)
             size_info = 0 if not size or not size.isdigit() else int(size)
