@@ -106,7 +106,7 @@ class FileUploader:
                         os.remove(file_path)
                     result = self.prepare_s3_download_file(file_info, file_count, self.total_file_count)
                     if not result:
-                        return False
+                        continue
                 self.files_processed += 1
                 result = self.copier.copy_file(file_info, self.overwrite, self.dryrun)
                 if result.get(Copier.STATUS):
