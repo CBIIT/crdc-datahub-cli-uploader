@@ -7,7 +7,7 @@ from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_
 from bento.common.utils import get_logger
 from common.graphql_client import APIInvoker
 from common.utils import clean_up_key_value, compare_version
-CLI_VERSION_API = "https://hub-dev.datacommons.cancer.gov/api/graphql"
+CLI_VERSION_API = "https://hub.datacommons.cancer.gov/api/graphql"
 class Config():
     def __init__(self):
         self.log = get_logger('Upload Config')
