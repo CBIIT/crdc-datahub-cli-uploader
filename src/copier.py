@@ -103,7 +103,8 @@ class Copier:
                 file_info[SKIPPED] = False
             #self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
             self.log.info(f'Uploading file, "{org_url}" to destination...')
-            dest_size = self._upload_obj(org_url, key, org_size, file_name)
+            original_file_name = os.path.basename(file_info[FILE_NAME_DEFAULT])
+            dest_size = self._upload_obj(org_url, key, org_size, original_file_name)
             if dest_size != org_size:
                 self.log.error(f'Uploading “{file_name}” failed - uploading was not complete. Please try again and contact the helpdesk if this error persists.')
                 return {self.STATUS: False}
