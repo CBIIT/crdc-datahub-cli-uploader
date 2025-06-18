@@ -103,7 +103,8 @@ class Copier:
                 file_info[SKIPPED] = False
             #self.log.info(f'Copying from {org_url} to s3://{self.bucket_name}/{key.strip("/")} ...')
             self.log.info(f'Uploading file, "{org_url}" to destination...')
-            dest_size = self._upload_obj(org_url, key, org_size)
+            original_file_name = os.path.basename(file_info[FILE_NAME_DEFAULT])
+            dest_size = self._upload_obj(org_url, key, org_size, original_file_name)
             if dest_size != org_size:
                 self.log.error(f'Uploading “{file_name}” failed - uploading was not complete. Please try again and contact the helpdesk if this error persists.')
                 return {self.STATUS: False}
@@ -129,7 +130,7 @@ class Copier:
             file_info[ERRORS] = [f"Uploading “{file_name}” failed - internal error."]
             return {self.STATUS: False}
 
-    def _upload_obj(self, org_url, key, org_size):
+    def _upload_obj(self, org_url, key, org_size, file_name):
 
         if self.type == TYPE_FILE or org_size > self.SINGLE_PUT_LIMIT: #study files upload (big files)
             parts = int(org_size) // self.MULTI_PART_CHUNK_SIZE
@@ -139,7 +140,7 @@ class Copier:
             with open(org_url, 'rb') as stream, create_progress_bar() as progress:
                 task_id = progress.add_task("Uploading...", total=org_size)
                 progress_callback = ProgressCallback(org_size, progress, task_id)
-                self.bucket.upload_file_obj(stream, key, progress_callback, t_config)
+                self.bucket.upload_file_obj(stream, key, progress_callback, file_name, t_config)
         else: #small file
             md5_obj = get_md5_hex_n_base64(org_url)
             md5_base64 = md5_obj['base64']
