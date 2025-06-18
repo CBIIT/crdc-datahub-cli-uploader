@@ -86,7 +86,8 @@ class S3Bucket:
 
 
 
-    def upload_file_obj(self, stream, key, progress_callback, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
+    def upload_file_obj(self, stream, key, progress_callback, file_name, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
+        extra_args.update({'ContentDisposition': f'attachment; filename="{file_name}"'})
         self.bucket.upload_fileobj(
             stream, key, ExtraArgs=extra_args, Config=config, Callback=progress_callback)
 
