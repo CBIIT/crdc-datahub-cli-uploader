@@ -10,7 +10,7 @@ from common.utils import extract_s3_info_from_url, format_size, format_time
 from common.s3util import S3Bucket
 from copier import Copier
 from common.md5_calculator import calculate_file_md5
-from botocore.exceptions import ClientError
+# Line removed as ClientError is not used in the provided code snippet.
 
 # This script upload files and matadata files from local to specified S3 bucket
 # input: file info list
