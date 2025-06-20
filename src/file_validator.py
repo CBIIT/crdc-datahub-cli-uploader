@@ -112,7 +112,7 @@ class FileValidator:
             converted_file_info = {FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT] , SUCCEEDED: None, ERRORS: None, SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)}
             self.fileList.append(converted_file_info)
             if not self.from_s3: # only  validate local data file
-                result = validate_data_file(converted_file_info, file_id, size_info, file_path, self.md5_cache, invalid_reason, self.log)
+                result = validate_data_file(converted_file_info, file_id, size_info, file_path, self.md5_cache, self.log)
                 if result:
                     self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
                 self.log.info(f'{line_num - 1} out of {total_file_cnt} file(s) have been validated.')
@@ -309,7 +309,7 @@ Validate file size and md5
 :param log: log
 :return: True if valid, False otherwise
 """
-def validate_data_file(file_info, file_id, size_info, file_path, md5_cache, invalid_reason, log):
+def validate_data_file(file_info, file_id, size_info, file_path, md5_cache, log):
     if not os.path.isfile(file_path):
         invalid_reason += f"File {file_path} does not exist!"
         file_info[SUCCEEDED] = False
