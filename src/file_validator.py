@@ -117,20 +117,20 @@ class FileValidator:
                 if not result:
                     self.invalid_count += 1
                     continue
-            else: # check file existing and validate file size in s3 bucket
-                s3_file_size, msg = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
-                if not s3_file_size:
-                    invalid_reason += msg
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: info[SUBFOLDER_FILE_NAME]})
-                    self.invalid_count += 1
-                    self.log.error(invalid_reason)
-                    continue
-                if s3_file_size != size_info:
-                    invalid_reason += f"Real file size {s3_file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {size_info}!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: info[SUBFOLDER_FILE_NAME]})
-                    self.invalid_count += 1
-                    self.log.error(invalid_reason)
-                    continue
+            # else: # check file existing and validate file size in s3 bucket
+            #     s3_file_size, msg = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
+            #     if not s3_file_size:
+            #         invalid_reason += msg
+            #         self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: info[SUBFOLDER_FILE_NAME]})
+            #         self.invalid_count += 1
+            #         self.log.error(invalid_reason)
+            #         continue
+            #     if s3_file_size != size_info:
+            #         invalid_reason += f"Real file size {s3_file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {size_info}!"
+            #         self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: info[SUBFOLDER_FILE_NAME]})
+            #         self.invalid_count += 1
+            #         self.log.error(invalid_reason)
+            #         continue
             file_size = size_info
             md5sum = info[MD5_DEFAULT]
             # validate file id
