@@ -144,6 +144,8 @@ class S3Bucket:
     # get contents info from s3 folder
     def get_contents(self, prefix):
         contents = []
+        if not prefix.endswith('/'):
+            prefix += '/'
         try:
             for obj in self.bucket.objects.filter(Prefix=prefix):
                 # key end with ".tsv" or ".txt"
