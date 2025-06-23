@@ -6,7 +6,7 @@ import re
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
     FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME,\
-    TEMP_UNZIP_DIR, ARCHIVE_MANIFEST
+    TEMP_UNZIP_DIR, ARCHIVE_MANIFEST, ARCHIVE_NAME
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url, dump_data_to_csv
@@ -234,16 +234,26 @@ class FileValidator:
                 for info in reader:
                     file_info = clean_up_key_value(info)
                     manifest_rows.append(file_info)
-                    file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
-                    file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
-                    if self.has_file_id is None:
-                        self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
-                    files_dict.update({file_name: {
-                        FILE_ID_DEFAULT: file_id,
-                        FILE_NAME_DEFAULT: file_name,
-                        FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
-                        MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
-                    }})
+                    if not is_archive_manifest:
+                        file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
+                        file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
+                        if self.has_file_id is None:
+                            self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
+                        files_dict.update({file_name: {
+                            FILE_ID_DEFAULT: file_id,
+                            FILE_NAME_DEFAULT: file_name,
+                            FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
+                            MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
+                        }})
+                    else:
+                        archive_file_name = file_info.get(ARCHIVE_NAME)
+                        file_path = file_info.get(FILE_PATH)
+                        files_dict.update({file_path: {
+                            ARCHIVE_NAME: archive_file_name,
+                            FILE_PATH: file_path,
+                            FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
+                            MD5_DEFAULT: file_info["md5"]
+                        }})
             files_info  =  list(files_dict.values())
         except UnicodeDecodeError as ue:
             # self.log.debug(ue)
@@ -329,7 +339,7 @@ Validate file size and md5
 :param log: log
 :return: True if valid, False otherwise
 """
-def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived_files_info):
+def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived_files_info = None):
     if not os.path.isfile(file_path):
         invalid_reason += f"File {file_path} does not exist!"
         file_info[SUCCEEDED] = False
@@ -358,8 +368,16 @@ def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived
         log.error(invalid_reason)
         return False
     # check zip file
-    if file_info[FILE_NAME_DEFAULT].endswith('.zip'):
-        if not validate_zip_file(archived_files_info, file_info, file_path, md5_cache, log):
+    file_name = file_info.get(FILE_NAME_DEFAULT)
+    if file_name.endswith('.zip'):
+        archive_file_info_list = [row for row in archived_files_info if row.get(ARCHIVE_NAME) == file_name]
+        if not archive_file_info_list or len(archive_file_info_list) == 0:
+            invalid_reason += f"Archived files info is not set!"
+            file_info[SUCCEEDED] = False
+            file_info[ERRORS] = [invalid_reason]
+            log.error(invalid_reason)
+            return False
+        if not validate_zip_file(archive_file_info_list, file_info, file_path, md5_cache, log):
             return False
     return True
 
@@ -371,6 +389,7 @@ def validate_zip_file(archived_files_info, file_info, file_path, md5_cache, log)
         zip_ref.extractall(TEMP_UNZIP_DIR)
         for extracted_file in zip_ref.namelist():
             extracted_file_path = os.path.join(TEMP_UNZIP_DIR, extracted_file)
+            file_info = [row for row in archived_files_info if row.get(FILE_PATH) == extracted_file][0]
             if not validate_data_file(file_info, file_info.get(FILE_SIZE_DEFAULT), extracted_file_path, md5_cache, log):
                 return False
         return True
