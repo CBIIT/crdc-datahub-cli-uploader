@@ -151,8 +151,28 @@ class S3Bucket:
                 # key end with ".tsv" or ".txt"
                 if obj.key[-4:] == ".tsv" or obj.key[-4:] == ".txt":
                     contents.append(obj.key)        
-        except Exception as e:
-            self.log.error("Failed to retrieve metadata file info")
+        except Exception:
+            self.log.error("Failed to retrieve child metadata files.")
+        finally:
+            return contents
+        
+    def get_contents_in_current_folder(self, prefix):
+        contents = []
+        if not prefix.endswith('/'):
+            prefix += '/'
+        try:
+            response = self.client.list_objects_v2(
+                Bucket=self.bucket_name,
+                Prefix=prefix,
+                Delimiter="/"
+            )
+            if 'Contents' in response:
+                for obj in response['Contents']:
+                    # key end with ".tsv" or ".txt"
+                    if obj['Key'][-4:] == ".tsv" or obj['Key'][-4:] == ".txt":
+                        contents.append(obj['Key'])
+        except Exception:
+            self.log.error("Failed to retrieve child metadata files.")
         finally:
             return contents
     

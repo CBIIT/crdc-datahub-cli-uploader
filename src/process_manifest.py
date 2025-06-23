@@ -173,7 +173,7 @@ def download_meatadata_in_s3(manifest_file_path, s3_bucket):
     bucket, prefix, manifest_file = get_s3_bucket_and_prefix(manifest_file_path)
     # download all files with ext "tsv" or "txt" in the folder of prefix from s3
     s3_bucket.set_s3_client(bucket, None)
-    metadata_files = s3_bucket.get_contents(prefix)
+    metadata_files = s3_bucket.get_contents_in_current_folder(prefix)
     for file in metadata_files:
         if not manifest_file in file:
             file_name = file.split("/")[-1]
