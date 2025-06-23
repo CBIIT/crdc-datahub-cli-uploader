@@ -9,7 +9,7 @@ from common.constants import FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  OVERWRITE, D
 from common.utils import extract_s3_info_from_url, format_size, format_time
 from common.s3util import S3Bucket
 from copier import Copier
-from common.md5_calculator import calculate_file_md5
+from file_validator import validate_data_file
 # Line removed as ClientError is not used in the provided code snippet.
 
 # This script upload files and matadata files from local to specified S3 bucket
@@ -157,46 +157,7 @@ class FileUploader:
             file_info[SUCCEEDED] = False
             if self.from_s3 == True:
                 os.remove(file_info[FILE_PATH])
-    
-    """
-    Validate downloaded file size and md5
-    :param file_info: file info dict
-    :param file_path: downloaded file path
-    :return: True if valid, False otherwise
-    """
-    def _validate_downloaded_file(self, file_info, file_path):
-        if not os.path.isfile(file_path):
-            invalid_reason = f"File {file_path} does not exist!"
-            file_info[SUCCEEDED] = False
-            file_info[ERRORS] = [invalid_reason]
-            self.log.error(invalid_reason)
-            return False
-
-        file_size = os.path.getsize(file_path)
-        if file_size != file_info[FILE_SIZE_DEFAULT]:
-            invalid_reason = f"Real file size {file_size} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {file_info[FILE_SIZE_DEFAULT]}!"
-            file_info[SUCCEEDED] = False
-            file_info[ERRORS] = [invalid_reason]
-            self.log.error(invalid_reason)
-            return False
-
-        md5_info = file_info[MD5_DEFAULT] 
-        if not md5_info:
-            invalid_reason = f"MD5 of {file_info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
-            file_info[SUCCEEDED] = False
-            file_info[ERRORS] = [invalid_reason]
-            self.log.error(invalid_reason)
-            return False
-
-        md5sum = calculate_file_md5(file_path, file_size, self.log)
-        if md5_info != md5sum:
-            invalid_reason = f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
-            file_info[SUCCEEDED] = False
-            file_info[ERRORS] = [invalid_reason]
-            self.log.error(invalid_reason)
-            return False
-        return True
-    
+  
     def prepare_s3_download_file(self, file_info, file_count, total_file_count):
         """
         Prepare file information for downloading from S3.
@@ -227,7 +188,7 @@ class FileUploader:
         
         self.log.info(f"{file_info[FILE_NAME_DEFAULT]} has been downloaded from {self.file_dir} successfully!")
         # validate size and md5 of downloaded data file
-        result = self._validate_downloaded_file(file_info, file_path)
+        result = validate_data_file(file_info, file_info.get(FILE_SIZE_DEFAULT), file_path, self.md5_cache, self.log)
         if result:
             self.log.info(f'Validating file integrity succeeded on "{file_info[FILE_NAME_DEFAULT]}"')
         self.log.info(f'{file_count} out of {total_file_count} file(s) have been validated.')

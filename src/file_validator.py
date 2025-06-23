@@ -5,12 +5,14 @@ import glob
 import re
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME,\
+    TEMP_UNZIP_DIR, ARCHIVE_MANIFEST
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url, dump_data_to_csv
 from common.s3util import S3Bucket
 from common.md5_calculator import calculate_file_md5
+import zipfile
 
 
 """ Requirement for the ticket crdcdh-343
@@ -26,11 +28,14 @@ class FileValidator:
         self.file_dir = configs.get(FILE_DIR)
         self.from_s3 = configs.get(FROM_S3)
         self.pre_manifest = configs.get(PRE_MANIFEST)
+        self.archive_manifest= configs.get(ARCHIVE_MANIFEST)
         self.fileList = [] #list of files object {file_name, file_path, file_size, invalid_reason}
+        self.archive_fileList= []
         self.log = get_logger('File_Validator')
         self.invalid_count = 0
         self.has_file_id = None
         self.manifest_rows = None
+        self.archive_manifest_rows = None
         self.field_names = None
         self.download_file_dir = None
         self.from_bucket_name = None
@@ -76,9 +81,11 @@ class FileValidator:
 
     #validate file's size and md5 against ree-manifest.   
     def validate_size_md5(self):
-        self.files_info =  self.read_manifest()
-        if not self.files_info or len(self.files_info ) == 0:
+        self.files_info, self.manifest_rows =  self.read_manifest()
+        if not self.files_info or not self.manifest_rows:
             return False
+        if self.archive_manifest:
+            self.archive_files_info, self.archive_manifest_rows =  self.read_manifest(is_archive_manifest=True)
         if self.from_s3 == True:
             self.download_file_dir = TEMP_DOWNLOAD_DIR
             os.makedirs(self.download_file_dir, exist_ok=True)
@@ -197,36 +204,29 @@ class FileValidator:
         return is_valid
 
     #public function to read pre-manifest and return list of file records 
-    def read_manifest(self):
+    def read_manifest(self, is_archive_manifest=False):
         files_info = []
         files_dict = {}
         manifest_rows = []
+        pre_manifest = self.pre_manifest if not is_archive_manifest else self.archive_manifest
         is_s3_manifest = self.pre_manifest.startswith(S3_START)
         if is_s3_manifest:
-            s3_bucket = None
-            bucket_name, key = extract_s3_info_from_url(self.pre_manifest)
+            bucket_name, key = extract_s3_info_from_url(pre_manifest)
             self.download_file_dir = TEMP_DOWNLOAD_DIR
             os.makedirs(self.download_file_dir, exist_ok=True)
             local_manifest = os.path.join(self.download_file_dir, key.split('/')[-1])
-            try:
-                s3_bucket = S3Bucket()
-                s3_bucket.set_s3_client(bucket_name, None)
-                result, msg = s3_bucket.file_exists_on_s3(key)
-                if  result == False:
-                    self.log.critical(msg)
-                    return None
-                self.log.info(f'Downloading remote manifest file, "{self.pre_manifest}" ...')
-                s3_bucket.download_object(key, local_manifest)
-                self.log.info(f'Downloaded remote manifest file, "{self.pre_manifest}" successfully.')
-                self.pre_manifest = self.configs[PRE_MANIFEST] = local_manifest
-            except Exception as e:
-                self.log.debug(e)
-                self.log.exception(f"Downloading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
-                return None
-            finally:
-                if s3_bucket:
-                    s3_bucket.close()
+            result = self.download_s3_manifest(bucket_name, key, local_manifest)
+            if not result:
+                return [], []
+            if not is_archive_manifest:
+                self.pre_manifest = pre_manifest = self.configs[PRE_MANIFEST] = local_manifest
+            else:
+                self.archive_manifest = pre_manifest = self.configs[ARCHIVE_MANIFEST] = local_manifest 
+
         try:
+            if not os.path.isfile(pre_manifest):
+                self.log.critical(f'Manifest file {pre_manifest} does not exist!')
+                return [], []
             with open(self.pre_manifest, mode='r', encoding='utf-8') as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
                 if not self.field_names:
@@ -245,17 +245,36 @@ class FileValidator:
                         MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
                     }})
             files_info  =  list(files_dict.values())
-            self.manifest_rows = manifest_rows
-
         except UnicodeDecodeError as ue:
             # self.log.debug(ue)
             self.log.exception(f"Reading manifest failed - manifest file contains non-ASCII characters.")
-            return []
+            return [], []
         except Exception as e:
             # self.log.debug(e)
             self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
-            return []
-        return files_info
+            return [], []
+        return files_info, manifest_rows
+    
+    def download_s3_manifest(self, bucket_name, key, local_manifest):
+        s3_bucket = None
+        try:
+            s3_bucket = S3Bucket()
+            s3_bucket.set_s3_client(bucket_name, None)
+            result, msg = s3_bucket.file_exists_on_s3(key)
+            if  result == False:
+                self.log.critical(msg)
+                return None
+            self.log.info(f'Downloading remote manifest file, "{self.pre_manifest}" ...')
+            s3_bucket.download_object(key, local_manifest)
+            self.log.info(f'Downloaded remote manifest file, "{self.pre_manifest}" successfully.')
+            return True
+        except Exception as e:
+            self.log.debug(e)
+            self.log.exception(f"Downloading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
+            return False
+        finally:
+            if s3_bucket:
+                s3_bucket.close()
     """
     validate file id format
     return: True or False, error message
@@ -310,7 +329,7 @@ Validate file size and md5
 :param log: log
 :return: True if valid, False otherwise
 """
-def validate_data_file(file_info, size_info, file_path, md5_cache, log):
+def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived_files_info):
     if not os.path.isfile(file_path):
         invalid_reason += f"File {file_path} does not exist!"
         file_info[SUCCEEDED] = False
@@ -338,7 +357,24 @@ def validate_data_file(file_info, size_info, file_path, md5_cache, log):
         file_info[ERRORS] = [invalid_reason]
         log.error(invalid_reason)
         return False
+    # check zip file
+    if file_info[FILE_NAME_DEFAULT].endswith('.zip'):
+        if not validate_zip_file(archived_files_info, file_info, file_path, md5_cache, log):
+            return False
     return True
+
+def validate_zip_file(archived_files_info, file_info, file_path, md5_cache, log):
+    """
+    validate zip file to unzip a file and validate size and md5 of each file in the zip against a separate archive manifest
+    """
+    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+        zip_ref.extractall(TEMP_UNZIP_DIR)
+        for extracted_file in zip_ref.namelist():
+            extracted_file_path = os.path.join(TEMP_UNZIP_DIR, extracted_file)
+            if not validate_data_file(file_info, file_info.get(FILE_SIZE_DEFAULT), extracted_file_path, md5_cache, log):
+                return False
+        return True
+
 
 def get_file_md5(file_path, md5_cache, file_size, log):
     """
