@@ -149,8 +149,9 @@ class S3Bucket:
         try:
             for obj in self.bucket.objects.filter(Prefix=prefix):
                 # key end with ".tsv" or ".txt"
-                if obj.key[-4:] == ".tsv" or obj.key[-4:] == ".txt":
-                    contents.append(obj.key)        
+                base, ext = os.path.splitext(obj['Key'])
+                if ext in [".tsv", ".txt"]:
+                    contents.append(obj['Key'])    
         except Exception:
             self.log.error("Failed to retrieve child metadata files.")
         finally:
@@ -169,7 +170,8 @@ class S3Bucket:
             if 'Contents' in response:
                 for obj in response['Contents']:
                     # key end with ".tsv" or ".txt"
-                    if obj['Key'][-4:] == ".tsv" or obj['Key'][-4:] == ".txt":
+                    base, ext = os.path.splitext(obj['Key'])
+                    if ext in [".tsv", ".txt"]:
                         contents.append(obj['Key'])
         except Exception:
             self.log.error("Failed to retrieve child metadata files.")
