@@ -162,13 +162,9 @@ class S3Bucket:
         if not prefix.endswith('/'):
             prefix += '/'
         try:
-            response = self.client.list_objects_v2(
-                Bucket=self.bucket_name,
-                Prefix=prefix,
-                Delimiter="/"
-            )
-            if 'Contents' in response:
-                for obj in response['Contents']:
+            paginator = self.client.get_paginator('list_objects_v2')
+            for page in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
+                for obj in page.get('Contents', []):
                     # key end with ".tsv" or ".txt"
                     base, ext = os.path.splitext(obj['Key'])
                     if ext in [".tsv", ".txt"]:
