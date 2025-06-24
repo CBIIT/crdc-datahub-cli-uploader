@@ -95,7 +95,7 @@ class FileValidator:
         # validate file name
         if not self.validate_file_name():
             return False
-        
+        self.field_names.append(SUBFOLDER_FILE_NAME) # add subfolder file name to field names
         for info in self.files_info:
             line_num += 1
             invalid_reason = ""
@@ -241,7 +241,6 @@ class FileValidator:
                         MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
                     }})
             files_info  =  list(files_dict.values())
-            self.field_names.append(SUBFOLDER_FILE_NAME) # add subfolder file name to field names
             self.manifest_rows = manifest_rows
 
         except UnicodeDecodeError as ue:

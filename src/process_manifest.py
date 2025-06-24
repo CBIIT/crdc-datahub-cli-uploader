@@ -10,7 +10,7 @@ from common.s3util import S3Bucket
 SEPARATOR_CHAR = '\t'
 UTF8_ENCODE ='utf8'
 NODE_TYPE_NAME = 'type'
-def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, manifest_columns, manifest_s3_url):
+def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, manifest_s3_url):
     """
     function: process_manifest_file
     params:
@@ -19,7 +19,6 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
      has_file_id: whether the pre-manifest file has file id column or not
      file_infos: the file info array of the pre-manifest file
      manifest_rows: the rows of the pre-manifest file
-     manifest_columns: the columns of the pre-manifest file
     return:
      True or False
 
@@ -40,15 +39,13 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
     final_manifest_path = (str.replace(file_path, ".tsv", "-final.tsv") if ".tsv" in file_path else str.replace(file_path, ".txt", "-final.tsv")) if needFinalManifest else file_path
     file_id_name = configs[FILE_ID_FIELD]
     file_name_name = configs[FILE_NAME_FIELD]
-    if not has_file_id:
-        manifest_columns.append(file_id_name)
     result = None
     newBatch = None
     final_file_path_list = []
     file_array = []
     try:
         if needFinalManifest:
-            result = add_file_id(file_id_name, file_name_name, final_manifest_path , file_infos, manifest_rows, manifest_columns, configs.get(OMIT_DCF_PREFIX))
+            result = add_file_id(file_id_name, file_name_name, final_manifest_path , file_infos, manifest_rows, configs.get(OMIT_DCF_PREFIX))
             if not result:
                 log.info(f"Failed to add file id to the pre-manifest, {final_manifest_path }.")
                 return False
@@ -92,15 +89,16 @@ def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, 
         return True
 
 # This method will create a new manifest file with the file id column added to the pre-manifest and internal_file_name.
-def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, manifest_rows, manifest_columns, omit_prefix):
+def add_file_id(file_id_name, file_name_name, final_manifest_path, file_infos, manifest_rows, omit_prefix):
     output = []
     for row in manifest_rows:
         file = [file for file in file_infos if file[FILE_NAME_DEFAULT] == row[file_name_name]][0]
         file[FILE_ID_DEFAULT] = file[FILE_ID_DEFAULT] if omit_prefix == False else file[FILE_ID_DEFAULT].replace(DCF_PREFIX, "")
-        row[file_id_name] = file[FILE_ID_DEFAULT]
         row[file_name_name] = os.path.basename(file[FILE_NAME_DEFAULT])
         row[SUBFOLDER_FILE_NAME] = file[SUBFOLDER_FILE_NAME] if SUBFOLDER_FILE_NAME in file else ""
+        row[file_id_name] = file[FILE_ID_DEFAULT]
         output.append(row.values())
+    manifest_columns = manifest_rows[0].keys()
     with open(final_manifest_path, 'w', newline='') as f: 
         writer = csv.writer(f, delimiter='\t')
         writer.writerow(manifest_columns)
@@ -175,7 +173,7 @@ def download_meatadata_in_s3(manifest_file_path, s3_bucket):
     bucket, prefix, manifest_file = get_s3_bucket_and_prefix(manifest_file_path)
     # download all files with ext "tsv" or "txt" in the folder of prefix from s3
     s3_bucket.set_s3_client(bucket, None)
-    metadata_files = s3_bucket.get_contents(prefix)
+    metadata_files = s3_bucket.get_contents_in_current_folder(prefix)
     for file in metadata_files:
         if not manifest_file in file:
             file_name = file.split("/")[-1]
@@ -198,7 +196,7 @@ def get_s3_bucket_and_prefix(manifest_file_path):
     manifest_file_path = manifest_file_path.replace("s3://", "")
     temp = manifest_file_path.split("/")
     bucket = temp[0]
-    prefix = "/".join(temp[1:-1])
+    prefix = "/".join(temp[1:-1]) + "/"
     manifest_file = temp[-1]
     return bucket, prefix, manifest_file
 

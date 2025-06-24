@@ -115,7 +115,7 @@ def controller():
                             # set file id to file_list
                             for i, file_info in enumerate(newBatch["files"]):
                                 file_list[i][FILE_ID_DEFAULT] = file_info.get(FILE_ID_DEFAULT)
-                        process_manifest_file(log, configs.copy(), validator.has_file_id, file_list, validator.manifest_rows, validator.field_names, s3_manifest_url)  
+                        process_manifest_file(log, configs.copy(), validator.has_file_id, file_list, validator.manifest_rows, s3_manifest_url)  
                 # stop heartbeat after uploading completed
                 if upload_heart_beater:
                     upload_heart_beater.stop()
