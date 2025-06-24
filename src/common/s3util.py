@@ -163,7 +163,7 @@ class S3Bucket:
             prefix += '/'
         try:
             paginator = self.client.get_paginator('list_objects_v2')
-            for page in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
+            for page in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix, Delimiter='/' ):
                 for obj in page.get('Contents', []):
                     # key end with ".tsv" or ".txt"
                     base, ext = os.path.splitext(obj['Key'])
