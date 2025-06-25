@@ -116,7 +116,6 @@ class Config():
                         return False
 
                 self.data[PRE_MANIFEST]  = manifest
-                self.data[ARCHIVE_MANIFEST] = self.data.get(ARCHIVE_MANIFEST, None)
     
         filepath = self.data.get(FILE_DIR)
         if filepath is None:

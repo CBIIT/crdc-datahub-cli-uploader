@@ -13,6 +13,7 @@ from common.utils import extract_s3_info_from_url, dump_data_to_csv
 from common.s3util import S3Bucket
 from common.md5_calculator import calculate_file_md5
 import zipfile
+import shutil
 
 
 """ Requirement for the ticket crdcdh-343
@@ -113,7 +114,13 @@ class FileValidator:
                 info[SUBFOLDER_FILE_NAME] = file_name
             file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, file_name)
             size = info.get(FILE_SIZE_DEFAULT)
-            size_info = 0 if not size or not size.isdigit() else int(size)
+            if not size:
+                invalid_reason += f"File size is missing for file {file_name}!"
+                self.log.error(invalid_reason)
+                self.invalid_count += 1
+                continue
+            size = str(size).replace(',', '')
+            size_info = 0 if not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
             converted_file_info = {FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: None, ERRORS: None, SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)}
@@ -381,19 +388,41 @@ def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived
             return False
     return True
 
-def validate_zip_file(archived_files_info, file_info, file_path, md5_cache, log):
+def validate_zip_file(archived_files_info, file_path, md5_cache, log):
     """
     validate zip file to unzip a file and validate size and md5 of each file in the zip against a separate archive manifest
     """
-    with zipfile.ZipFile(file_path, 'r') as zip_ref:
-        zip_ref.extractall(TEMP_UNZIP_DIR)
-        for extracted_file in zip_ref.namelist():
-            extracted_file_path = os.path.join(TEMP_UNZIP_DIR, extracted_file)
-            file_info = [row for row in archived_files_info if row.get(FILE_PATH) == extracted_file][0]
-            if not validate_data_file(file_info, file_info.get(FILE_SIZE_DEFAULT), extracted_file_path, md5_cache, log):
-                return False
-        return True
-
+    # create temp zip file dir
+    os.makedirs(TEMP_UNZIP_DIR, exist_ok=True)
+    try:
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            zip_ref.extractall(TEMP_UNZIP_DIR)
+            for extracted_file in zip_ref.namelist():
+                extracted_file_path = os.path.join(TEMP_UNZIP_DIR, extracted_file)
+                file_info = next(row for row in archived_files_info if row.get(FILE_PATH) == extracted_file)
+                # file size
+                file_size = os.path.getsize(extracted_file_path)
+                if file_size != int(file_info[FILE_SIZE_DEFAULT]):
+                    invalid_reason = f"Real file size {file_size} of file {extracted_file} does not match with that in archive manifest {file_info[FILE_SIZE_DEFAULT]}!"
+                    log.error(invalid_reason)
+                    return False
+                # md5
+                md5sum = get_file_md5(extracted_file_path, md5_cache, file_size, log)
+                if md5sum != file_info[MD5_DEFAULT]:
+                    invalid_reason = f"Real file md5 {md5sum} of file {extracted_file} does not match with that in archive manifest {file_info[MD5_DEFAULT]}!"
+                    log.error(invalid_reason)
+                    return False
+            return True
+    except Exception as e:
+        log.error(f"Failed to validate zip file: {e}")
+        return False
+    finally:
+        # remove contents of the temporary directory
+        if os.path.isdir(TEMP_UNZIP_DIR):
+            for file in os.listdir(TEMP_UNZIP_DIR):
+                file_path = os.path.join(TEMP_UNZIP_DIR, file)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
 
 def get_file_md5(file_path, md5_cache, file_size, log):
     """
@@ -402,11 +431,12 @@ def get_file_md5(file_path, md5_cache, file_size, log):
     file_modified_at = os.path.getmtime(file_path)
     # check if md5 is in cache by file name and file size
     cached_md5 = [row[MD5_DEFAULT] for row in md5_cache if row[FILE_PATH] == file_path and row[FILE_SIZE_DEFAULT] == str(file_size) and 
-                    row[MODIFIED_AT] == str(file_modified_at)]
+                    row[MODIFIED_AT] == str(file_modified_at)] if md5_cache else None
     if not cached_md5 or len(cached_md5) == 0:
          #calculate file md5
         md5sum = calculate_file_md5(file_path, file_size, log)
-        md5_cache.append({FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, MODIFIED_AT: file_modified_at})
+        if md5_cache: 
+            md5_cache.append({FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, MODIFIED_AT: file_modified_at})
     else:
         md5sum = cached_md5[0]
 
