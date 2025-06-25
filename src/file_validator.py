@@ -230,15 +230,15 @@ class FileValidator:
                 for info in reader:
                     file_info = clean_up_key_value(info)
                     manifest_rows.append(file_info)
-                    file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
+                    file_name = file_info.get(self.configs.get(FILE_NAME_FIELD))
                     file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
                     if self.has_file_id is None:
                         self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
                     files_dict.update({file_name: {
                         FILE_ID_DEFAULT: file_id,
                         FILE_NAME_DEFAULT: file_name,
-                        FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
-                        MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
+                        FILE_SIZE_DEFAULT: file_info.get(self.configs.get(FILE_SIZE_FIELD)),
+                        MD5_DEFAULT: file_info.get(self.configs.get(FILE_MD5_FIELD))
                     }})
             files_info  =  list(files_dict.values())
             self.manifest_rows = manifest_rows
