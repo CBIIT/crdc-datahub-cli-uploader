@@ -2,7 +2,7 @@ import csv, os
 import pandas as pd
 from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_BUCKET, FILE_PREFIX, BATCH_ID, DCF_PREFIX, BATCH_CREATED,\
     FILE_ID_FIELD, UPLOAD_TYPE, FILE_NAME_DEFAULT, FILE_PATH, FILE_SIZE_DEFAULT, BATCH_STATUS, PRE_MANIFEST, OMIT_DCF_PREFIX,\
-    TEMP_DOWNLOAD_DIR, FROM_S3, SUBFOLDER_FILE_NAME
+    TEMP_DOWNLOAD_DIR, FROM_S3, SUBFOLDER_FILE_NAME, SEPARATOR_CHAR
 from common.graphql_client import APIInvoker
 from copier import Copier
 from common.s3util import S3Bucket
@@ -126,16 +126,23 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
             file_id_to_check = f"{file_type}.{configs.get(FILE_ID_FIELD)}"
             if len(tsv_files) > 0:
                 for file in tsv_files:
-                    # check if tsv file's header contains 
-                    with open(file) as f:
-                        reader = csv.DictReader(f, delimiter='\t')
-                        header = next(reader)  # get the first row
-                        if file_id_to_check in header:
-                            children_files.append(file)
-                        else:
-                            # remove the file if in temp dir
-                            if is_s3:
-                                os.remove(file)
+                    if not os.path.isfile(file):
+                        continue
+                    try:
+                        with open(file) as f:
+                            reader = csv.DictReader(f, delimiter='\t')
+                            header = next(reader)  # get the first row
+                            if file_id_to_check in header:
+                                children_files.append(file)
+                            else:
+                                # remove the file if in temp dir
+                                if is_s3:
+                                    os.remove(file)
+                    except Exception:
+                        # remove the file if in temp dir
+                        if is_s3:
+                            os.remove(file)
+
             if len(children_files) > 0:
                 for file in children_files:
                     inserted = False
