@@ -243,26 +243,16 @@ class FileValidator:
                 for info in reader:
                     file_info = clean_up_key_value(info)
                     manifest_rows.append(file_info)
-                    file_name = file_info.get(self.configs.get(FILE_NAME_FIELD))
-                    file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
-                    if self.has_file_id is None:
-                        self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
-                    files_dict.update({file_name: {
-                        FILE_ID_DEFAULT: file_id,
-                        FILE_NAME_DEFAULT: file_name,
-                        FILE_SIZE_DEFAULT: file_info.get(self.configs.get(FILE_SIZE_FIELD)),
-                        MD5_DEFAULT: file_info.get(self.configs.get(FILE_MD5_FIELD))
-                    }})
                     if not is_archive_manifest:
-                        file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
+                        file_name = file_info.get(self.configs.get(FILE_NAME_FIELD))
                         file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
                         if self.has_file_id is None:
                             self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
                         files_dict.update({file_name: {
                             FILE_ID_DEFAULT: file_id,
                             FILE_NAME_DEFAULT: file_name,
-                            FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
-                            MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
+                            FILE_SIZE_DEFAULT: file_info.get(self.configs.get(FILE_SIZE_FIELD)),
+                            MD5_DEFAULT: file_info.get(self.configs.get(FILE_MD5_FIELD))
                         }})
                     else:
                         archive_file_name = file_info.get(ARCHIVE_NAME)
@@ -270,11 +260,10 @@ class FileValidator:
                         files_dict.update({file_path: {
                             ARCHIVE_NAME: archive_file_name,
                             FILE_PATH: file_path,
-                            FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
-                            MD5_DEFAULT: file_info["md5"]
+                            FILE_SIZE_DEFAULT: file_info.get(self.configs.get(FILE_SIZE_FIELD)),
+                            MD5_DEFAULT: file_info.get("md5")
                         }})
             files_info  =  list(files_dict.values())
-            self.manifest_rows = manifest_rows
 
         except UnicodeDecodeError as ue:
             # self.log.debug(ue)
@@ -360,6 +349,7 @@ Validate file size and md5
 :return: True if valid, False otherwise
 """
 def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived_files_info = None):
+    invalid_reason = ""
     if not os.path.isfile(file_path):
         invalid_reason += f"File {file_path} does not exist!"
         file_info[SUCCEEDED] = False
