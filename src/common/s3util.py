@@ -144,13 +144,33 @@ class S3Bucket:
     # get contents info from s3 folder
     def get_contents(self, prefix):
         contents = []
+        if not prefix.endswith('/'):
+            prefix += '/'
         try:
             for obj in self.bucket.objects.filter(Prefix=prefix):
                 # key end with ".tsv" or ".txt"
-                if obj.key[-4:] == ".tsv" or obj.key[-4:] == ".txt":
-                    contents.append(obj.key)        
-        except Exception as e:
-            self.log.error("Failed to retrieve metadata file info")
+                base, ext = os.path.splitext(obj['Key'])
+                if ext in [".tsv", ".txt"]:
+                    contents.append(obj['Key'])    
+        except Exception:
+            self.log.error("Failed to retrieve child metadata files.")
+        finally:
+            return contents
+        
+    def get_contents_in_current_folder(self, prefix):
+        contents = []
+        if not prefix.endswith('/'):
+            prefix += '/'
+        try:
+            paginator = self.client.get_paginator('list_objects_v2')
+            for page in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix, Delimiter='/' ):
+                for obj in page.get('Contents', []):
+                    # key end with ".tsv" or ".txt"
+                    base, ext = os.path.splitext(obj['Key'])
+                    if ext in [".tsv", ".txt"]:
+                        contents.append(obj['Key'])
+        except Exception:
+            self.log.error("Failed to retrieve child metadata files.")
         finally:
             return contents
     

@@ -105,6 +105,7 @@ class FileValidator:
         # validate file name
         if not self.validate_file_name():
             return False
+        self.field_names.append(SUBFOLDER_FILE_NAME) # add subfolder file name to field names
         for info in self.files_info:
             line_num += 1
             invalid_reason = ""
@@ -242,6 +243,16 @@ class FileValidator:
                 for info in reader:
                     file_info = clean_up_key_value(info)
                     manifest_rows.append(file_info)
+                    file_name = file_info.get(self.configs.get(FILE_NAME_FIELD))
+                    file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
+                    if self.has_file_id is None:
+                        self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
+                    files_dict.update({file_name: {
+                        FILE_ID_DEFAULT: file_id,
+                        FILE_NAME_DEFAULT: file_name,
+                        FILE_SIZE_DEFAULT: file_info.get(self.configs.get(FILE_SIZE_FIELD)),
+                        MD5_DEFAULT: file_info.get(self.configs.get(FILE_MD5_FIELD))
+                    }})
                     if not is_archive_manifest:
                         file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
                         file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
@@ -263,6 +274,8 @@ class FileValidator:
                             MD5_DEFAULT: file_info["md5"]
                         }})
             files_info  =  list(files_dict.values())
+            self.manifest_rows = manifest_rows
+
         except UnicodeDecodeError as ue:
             # self.log.debug(ue)
             self.log.exception(f"Reading manifest failed - manifest file contains non-ASCII characters.")
