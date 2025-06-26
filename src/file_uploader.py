@@ -20,7 +20,7 @@ class FileUploader:
     TTL = 'ttl'
     INFO = 'file_info'
 
-    def __init__(self, configs, file_list, md5_cache, md5_cache_file):
+    def __init__(self, configs, file_list, md5_cache, md5_cache_file, archived_files_info):
         """"
         :param configs: all configurations for file uploading
         :param file_list: list of file path, size
@@ -32,6 +32,7 @@ class FileUploader:
         self.credential = configs.get(TEMP_CREDENTIAL)
         # self.pre_manifest = configs.get(PRE_MANIFEST)
         self.file_info_list = file_list
+        self.archived_files_info = archived_files_info
         self.copier = None
         self.count = len(file_list)
         self.overwrite = configs.get(OVERWRITE)
@@ -188,7 +189,7 @@ class FileUploader:
         
         self.log.info(f"{file_info[FILE_NAME_DEFAULT]} has been downloaded from {self.file_dir} successfully!")
         # validate size and md5 of downloaded data file
-        result = validate_data_file(file_info, file_info.get(FILE_SIZE_DEFAULT), file_path, self.md5_cache, self.log)
+        result = validate_data_file(file_info, file_info.get(FILE_SIZE_DEFAULT), file_path, self.md5_cache, self.log, self.archived_files_info)
         if result:
             self.log.info(f'Validating file integrity succeeded on "{file_info[FILE_NAME_DEFAULT]}"')
         self.log.info(f'{file_count} out of {total_file_count} file(s) have been validated.')
