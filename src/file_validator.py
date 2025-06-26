@@ -3,6 +3,8 @@ import csv
 import os
 import glob
 import re
+import zipfile
+import shutil
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
     FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME,\
@@ -12,10 +14,6 @@ from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url, dump_data_to_csv
 from common.s3util import S3Bucket
 from common.md5_calculator import calculate_file_md5
-import zipfile
-import shutil
-import shutil
-
 
 """ Requirement for the ticket crdcdh-343
 For files: read manifest file and validate local files’ sizes and md5s
@@ -160,7 +158,7 @@ class FileValidator:
                 self.invalid_count += 1
                 self.log.error(invalid_reason)
                 continue
-            
+
         # save md5 cache to file
         if not self.from_s3:
             dump_data_to_csv(self.md5_cache, self.md5_cache_file)
