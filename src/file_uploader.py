@@ -115,7 +115,7 @@ class FileUploader:
                     file_info[SUCCEEDED] = True
                     file_info[ERRORS] = None
                     if self.from_s3 == True:
-                        os.remove(file_path)
+                        os.remove(file_info[FILE_PATH])
                 else:
                     self._deal_with_failed_file(job, file_queue)
                     if job[self.TTL]  > 0:
