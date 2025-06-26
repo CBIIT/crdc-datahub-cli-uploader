@@ -17,6 +17,8 @@ Config:
     # path to manifest file, conditional required when type = data file
     manifest: /path_to_the_manifest_file
 
+    # path to archive manifest file, conditional required when type = data file
+    archive_manifest: /path_to_the_archive_manifest_file
     # file uploading retries
     retries: 3
 
