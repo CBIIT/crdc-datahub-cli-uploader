@@ -160,9 +160,7 @@ class FileValidator:
                 self.invalid_count += 1
                 self.log.error(invalid_reason)
                 continue
-
-            # validate zip file with 
-
+            
         # save md5 cache to file
         if not self.from_s3:
             dump_data_to_csv(self.md5_cache, self.md5_cache_file)
