@@ -145,11 +145,8 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
                             if is_s3:
                                 os.remove(file)
                             continue
-
-                    # check if tsv file's header contains file_id
-                    with open(file) as f:
-                        reader = csv.DictReader(f, delimiter = SEPARATOR_CHAR)
-                        header = next(reader)  # get the first row
+                        # check if tsv file's header contains file_id
+                        header = first_line.strip().split(SEPARATOR_CHAR)
                         if file_id_to_check in header:
                             children_files.append(file)
                         else:
