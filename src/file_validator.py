@@ -14,6 +14,7 @@ from common.s3util import S3Bucket
 from common.md5_calculator import calculate_file_md5
 import zipfile
 import shutil
+import shutil
 
 
 """ Requirement for the ticket crdcdh-343
@@ -126,7 +127,7 @@ class FileValidator:
             converted_file_info = {FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: None, ERRORS: None, SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)}
             self.fileList.append(converted_file_info)
             if not self.from_s3: # only  validate local data file
-                result = validate_data_file(converted_file_info, size_info, file_path, self.md5_cache, self.log)
+                result = validate_data_file(converted_file_info, size_info, file_path, self.md5_cache, self.log, self.archive_files_info)
                 if result:
                     self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
                 self.log.info(f'{line_num - 1} out of {total_file_cnt} file(s) have been validated.')
@@ -234,7 +235,7 @@ class FileValidator:
             if not os.path.isfile(pre_manifest):
                 self.log.critical(f'Manifest file {pre_manifest} does not exist!')
                 return [], []
-            with open(self.pre_manifest, mode='r', encoding='utf-8') as pre_m:
+            with open(pre_manifest, mode='r', encoding='utf-8') as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
                 if not self.field_names:
                     self.field_names = clean_up_strs(reader.fieldnames)
@@ -377,6 +378,7 @@ def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived
     # check zip file
     file_name = file_info.get(FILE_NAME_DEFAULT)
     if file_name.endswith('.zip'):
+        log.info(f"Validating contents of zip file {file_name} ...")
         archive_file_info_list = [row for row in archived_files_info if row.get(ARCHIVE_NAME) == file_name]
         if not archive_file_info_list or len(archive_file_info_list) == 0:
             invalid_reason += f"Archived files info is not set!"
@@ -384,8 +386,11 @@ def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived
             file_info[ERRORS] = [invalid_reason]
             log.error(invalid_reason)
             return False
-        if not validate_zip_file(archive_file_info_list, file_info, file_path, md5_cache, log):
+        if not validate_zip_file(archive_file_info_list, file_path, md5_cache, log):
+            log.error(f"Failed validating contents of zip file {file_name}.")
             return False
+        else:
+            log.info(f"Validated contents of zip file {file_name} successfully.")
     return True
 
 def validate_zip_file(archived_files_info, file_path, md5_cache, log):
@@ -397,22 +402,47 @@ def validate_zip_file(archived_files_info, file_path, md5_cache, log):
     try:
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
             zip_ref.extractall(TEMP_UNZIP_DIR)
-            for extracted_file in zip_ref.namelist():
-                extracted_file_path = os.path.join(TEMP_UNZIP_DIR, extracted_file)
-                file_info = next(row for row in archived_files_info if row.get(FILE_PATH) == extracted_file)
+            # for extracted_file in zip_ref.namelist():
+            #     # skip folders
+            #     if extracted_file.endswith('/'):
+            #         continue
+            #     extracted_file_path = os.path.join(TEMP_UNZIP_DIR, extracted_file)
+            #     file_info = next(row for row in archived_files_info if row.get(FILE_PATH) == extracted_file)
+            #     # file size
+            #     file_size = os.path.getsize(extracted_file_path)
+            #     if file_size != int(file_info[FILE_SIZE_DEFAULT]):
+            #         invalid_reason = f"Real file size {file_size} of file {extracted_file} does not match with that in archive manifest {file_info[FILE_SIZE_DEFAULT]}!"
+            #         log.error(invalid_reason)
+            #         return False
+            #     # md5
+            #     md5sum = get_file_md5(extracted_file_path, md5_cache, file_size, log)
+            #     if md5sum != file_info[MD5_DEFAULT]:
+            #         invalid_reason = f"Real file md5 {md5sum} of file {extracted_file} does not match with that in archive manifest {file_info[MD5_DEFAULT]}!"
+            #         log.error(invalid_reason)
+            #         return False
+        # list dir under TEMP_UNZIP_DIR and remove __MACOSX dir and contents
+        #  remove __MACOSX dir and contents
+        if os.path.isdir(os.path.join(TEMP_UNZIP_DIR, '__MACOSX')):
+            shutil.rmtree(os.path.join(TEMP_UNZIP_DIR, '__MACOSX'))  # remove __MACOSX dir and contents
+        # list all files under TEMP_UNZIP_DIR
+        for root, dirs, files in os.walk(TEMP_UNZIP_DIR):
+            for file_name in files:
+                extracted_file_path = os.path.join(TEMP_UNZIP_DIR, file_name)
+                file_info = next(row for row in archived_files_info if row.get(FILE_PATH) == file_name)
                 # file size
                 file_size = os.path.getsize(extracted_file_path)
                 if file_size != int(file_info[FILE_SIZE_DEFAULT]):
-                    invalid_reason = f"Real file size {file_size} of file {extracted_file} does not match with that in archive manifest {file_info[FILE_SIZE_DEFAULT]}!"
+                    invalid_reason = f"Real file size {file_size} of file {file_name} does not match with that in archive manifest {file_info[FILE_SIZE_DEFAULT]}!"
                     log.error(invalid_reason)
                     return False
                 # md5
                 md5sum = get_file_md5(extracted_file_path, md5_cache, file_size, log)
                 if md5sum != file_info[MD5_DEFAULT]:
-                    invalid_reason = f"Real file md5 {md5sum} of file {extracted_file} does not match with that in archive manifest {file_info[MD5_DEFAULT]}!"
+                    invalid_reason = f"Real file md5 {md5sum} of file {file_name} does not match with that in archive manifest {file_info[MD5_DEFAULT]}!"
                     log.error(invalid_reason)
                     return False
-            return True
+                log.info(f"Found file {file_name} in {file_name}.")
+        return True
     except Exception as e:
         log.error(f"Failed to validate zip file: {e}")
         return False
