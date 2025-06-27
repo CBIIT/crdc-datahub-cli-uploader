@@ -67,7 +67,7 @@ def controller():
     file_list = validator.fileList
     if validator.invalid_count == 0:
         #step 3: create a batch
-        file_array = [ item[SUBFOLDER_FILE_NAME] for item in file_list]
+        file_array = [ item[SUBFOLDER_FILE_NAME] if item.get(SUBFOLDER_FILE_NAME) else item.get(FILE_NAME_DEFAULT) for item in file_list]
         newBatch = None
         if apiInvoker.create_batch(file_array):
             newBatch = apiInvoker.new_batch
@@ -134,7 +134,7 @@ def controller():
                         item[SUCCEEDED] = False
             finally:
                 #set fileList for update batch
-                file_array = [{"fileName": item[SUBFOLDER_FILE_NAME], "succeeded": item.get(SUCCEEDED, False), "errors": item[ERRORS], "skipped": item.get(SKIPPED, False)} for item in file_list]
+                file_array = [{"fileName": item[SUBFOLDER_FILE_NAME] if item.get(SUBFOLDER_FILE_NAME) else item.get(FILE_NAME_DEFAULT), "succeeded": item.get(SUCCEEDED, False), "errors": item.get(ERRORS, []), "skipped": item.get(SKIPPED, False)} for item in file_list]
                 #step 6: update the batch
                 if apiInvoker.update_batch(newBatch[BATCH_ID], file_array):
                     batch = apiInvoker.batch
