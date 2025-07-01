@@ -137,7 +137,7 @@ class FileValidator:
             result, msg = self.validate_file_id(file_id, line_num)
             if not result:
                 invalid_reason += msg
-                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)})
                 self.invalid_count += 1
                 self.log.error(invalid_reason)
                 continue
