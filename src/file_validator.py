@@ -425,6 +425,7 @@ def validate_zip_file(archived_files_info, file_path, md5_cache, log):
             invalid_reason = f"Number of files in zip file {file_path} does not match with that in archive manifest!"
             log.error(invalid_reason)
             return False
+        rtnVal = True
         for file_name in files:
             file_info = next((row for row in archived_files_info if row.get(FILE_PATH) == file_name), None)
             file_path = os.path.join(TEMP_UNZIP_DIR, file_name)
@@ -433,13 +434,15 @@ def validate_zip_file(archived_files_info, file_path, md5_cache, log):
             if file_size != int(file_info[FILE_SIZE_DEFAULT]):
                 invalid_reason = f"Real file size {file_size} of file {file_name} does not match with that in archive manifest {file_info[FILE_SIZE_DEFAULT]}!"
                 log.error(invalid_reason)
+                rtnVal = False
                 continue
             # md5
             md5sum = get_file_md5(file_path, md5_cache, file_size, log)
             if md5sum != file_info[MD5_DEFAULT]:
                 invalid_reason = f"Real file md5 {md5sum} of file {file_name} does not match with that in archive manifest {file_info[MD5_DEFAULT]}!"
                 log.error(invalid_reason)
-        return True
+                rtnVal = False
+        return rtnVal
     except Exception as e:
         log.error(f"Failed to validate zip file contents: {e}")
         return False
