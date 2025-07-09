@@ -61,3 +61,6 @@ HEARTBEAT_INTERVAL_CONFIG = "heartbeat_interval"
 CURRENT_UPLOADER_VERSION_CONFIG = "current_uploader_version"
 SUBFOLDER_FILE_NAME = "internal_file_name"
 SEPARATOR_CHAR = '\t'
+TEMP_UNZIP_DIR = "tmp/unzip"
+ARCHIVE_MANIFEST = "archive_manifest"
+ARCHIVE_NAME = "archive_name"
