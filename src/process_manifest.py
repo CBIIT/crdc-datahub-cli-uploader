@@ -152,7 +152,8 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
                         for index, row in df.iterrows():
                             fileName = row[file_id_to_check]
                             if fileName:
-                                file_info = next((file for file in manifest_rows if file[configs[FILE_NAME_FIELD]] == fileName), None)
+                                modified_file_name = fileName.replace("/", "_")
+                                file_info = next((file for file in manifest_rows if file[configs[SUBFOLDER_FILE_NAME]] == modified_file_name), None)
                                 if file_info:
                                     file_id = file_info[configs[FILE_ID_FIELD]]
                                     df.at[index, file_id_to_check] = file_id
