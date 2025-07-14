@@ -53,7 +53,7 @@ S3_START= "s3://"
 FROM_S3 = "from_s3"
 TEMP_DOWNLOAD_DIR = "tmp/download"
 
-CLI_VERSION = "4.0"
+CLI_VERSION = "4.1"
 MD5_CACHE_DIR = "tmp/md5"
 MD5_CACHE_FILE = "md5_cache.csv"
 MODIFIED_AT = "modifiedAt"
