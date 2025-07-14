@@ -53,7 +53,11 @@ S3_START= "s3://"
 FROM_S3 = "from_s3"
 TEMP_DOWNLOAD_DIR = "tmp/download"
 
-CLI_VERSION = "3.2"
+CLI_VERSION = "4.0"
 MD5_CACHE_DIR = "tmp/md5"
 MD5_CACHE_FILE = "md5_cache.csv"
 MODIFIED_AT = "modifiedAt"
+HEARTBEAT_INTERVAL_CONFIG = "heartbeat_interval"
+CURRENT_UPLOADER_VERSION_CONFIG = "current_uploader_version"
+SUBFOLDER_FILE_NAME = "internal_file_name"
+SEPARATOR_CHAR = '\t'

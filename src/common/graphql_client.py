@@ -44,7 +44,6 @@ class APIInvoker:
                 return False
 
         except Exception as e:
-            self.log.debug(e)
             self.log.exception(f'Retrieve temporary credential failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
 
@@ -102,16 +101,19 @@ class APIInvoker:
             return False
 
     #3) update upload batch
-    def update_batch(self, batchID, uploaded_files):
+    def update_batch(self, batchID, uploaded_files, uploading="false"):
         self.batch = None
         #adjust file list to match the graphql param.
-        file_array = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors").replace("\"skipped\"", "skipped") \
-            if uploaded_files and len(uploaded_files) > 0 else json.dumps(uploaded_files)
+        file_array = []
+        if uploaded_files:
+            file_array = json.dumps(uploaded_files).replace("\"fileName\"", "fileName").replace("\"succeeded\"", "succeeded").replace("\"errors\"", "errors").replace("\"skipped\"", "skipped") \
+                if uploaded_files and len(uploaded_files) > 0 else json.dumps(uploaded_files)
         body = f"""
         mutation {{
             updateBatch (
                 batchID: \"{batchID}\", 
-                files: {file_array}
+                files: {file_array}, 
+                uploading: {uploading}
                 )
             {{
                 _id,
@@ -126,7 +128,8 @@ class APIInvoker:
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
-            self.log.info(f"update batch response status code: {status}.")
+            if uploading == "false":
+                self.log.info(f"update batch response status code: {status}.")
             if status == 200: 
                 results = response.json()
                 if results.get("errors"):
@@ -139,10 +142,10 @@ class APIInvoker:
                         self.log.error('Update batch failed!')
                         return False
             else:
-                self.log.error(f'Update batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
+                if uploading == "false":
+                    self.log.error(f'Update batch failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
                 return False
         except Exception as e:
-            self.log.debug(e)
             self.log.exception(f'Update batch failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
         
@@ -155,7 +158,8 @@ class APIInvoker:
                 name_field,
                 size_field,
                 md5_field,
-                omit_DCF_prefix
+                omit_DCF_prefix, 
+                heartbeat_interval
             }}
         }}
         """
@@ -181,9 +185,41 @@ class APIInvoker:
                 return False, None
 
         except Exception as e:
-            self.log.debug(e)
             self.log.exception(f'Get data file config failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False, None
+    
+    def get_cli_version(self):
+        body = f"""
+        query {{
+            retrieveCLIUploaderVersion
+        }}
+        """
+        try:
+            response = requests.post(url=self.url, json={"query": body})
+            status = response.status_code
+            self.log.info(f"get_cli_version response status code: {status}.")
+            if status == 200:
+                results = response.json()
+                if results.get("errors"):
+                    msg = f'Get CLI Version failed: {results.get("errors")[0].get("message")}.'
+                    self.log.error(msg)
+                    return False, None
+                else:
+                    version_config = results.get("data").get("retrieveCLIUploaderVersion")
+                    if version_config:
+                        return True, version_config
+                    else:
+                        self.log.error('Get CLI Version  failed!')
+                        return False, None
+            else:
+                self.log.error(f'Get CLI Version  failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
+                return False, None
+
+        except Exception as e:
+            # self.log.debug(e)
+            self.log.exception(f'Get CLI Version failed - internal error. Please try again and contact the helpdesk if this error persists.')
+            return False, None
+        
 
 
     

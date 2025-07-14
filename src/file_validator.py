@@ -2,9 +2,10 @@
 import csv
 import os
 import glob
+import re
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
-    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT
+    FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url, dump_data_to_csv
@@ -87,15 +88,28 @@ class FileValidator:
         line_num = 1
         total_file_cnt = len(self.files_info)
         self.log.info(f'Start to validate data files...')
+        # add warning if manifest include "internal_file_name" column
+        if SUBFOLDER_FILE_NAME in self.field_names:
+            msg = "internal_file_name column found in the manifest! Values in internal_file_name column will be replaced by system generated values"
+            self.log.warning(msg)
+        # validate file name
+        if not self.validate_file_name():
+            return False
+        self.field_names.append(SUBFOLDER_FILE_NAME) # add subfolder file name to field names
         for info in self.files_info:
             line_num += 1
             invalid_reason = ""
-            file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, info[FILE_NAME_DEFAULT])
+            file_name = info.get(FILE_NAME_DEFAULT)
+            if '/' in file_name or '\\' in file_name:
+                info[SUBFOLDER_FILE_NAME] = file_name.replace('/', '_').replace('\\', '_')
+            else:
+                info[SUBFOLDER_FILE_NAME] = file_name
+            file_path = os.path.join(self.file_dir if not self.from_s3 else self.download_file_dir, file_name)
             size = info.get(FILE_SIZE_DEFAULT)
             size_info = 0 if not size or not size.isdigit() else int(size)
             info[FILE_SIZE_DEFAULT]  = size_info #convert to int
             file_id = info.get(FILE_ID_DEFAULT)
-            if not self.from_s3: # only validate local data file
+            if not self.from_s3: # only  validate local data file
                 result = validate_data_file(info, file_id, size_info, file_path, self.fileList, self.md5_cache, invalid_reason, self.log)
                 if result:
                     self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
@@ -103,18 +117,17 @@ class FileValidator:
                 if not result:
                     self.invalid_count += 1
                     continue
-                
             else: # check file existing and validate file size in s3 bucket
                 s3_file_size, msg = self.s3_bucket.get_object_size(os.path.join(self.from_prefix, info[FILE_NAME_DEFAULT]))
                 if not s3_file_size:
                     invalid_reason += msg
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: info[SUBFOLDER_FILE_NAME]})
                     self.invalid_count += 1
                     self.log.error(invalid_reason)
                     continue
                 if s3_file_size != size_info:
                     invalid_reason += f"Real file size {s3_file_size} of file {info[FILE_NAME_DEFAULT]} does not match with that in manifest {size_info}!"
-                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+                    self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: info[SUBFOLDER_FILE_NAME]})
                     self.invalid_count += 1
                     self.log.error(invalid_reason)
                     continue
@@ -124,18 +137,61 @@ class FileValidator:
             result, msg = self.validate_file_id(file_id, line_num)
             if not result:
                 invalid_reason += msg
-                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
+                self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)})
                 self.invalid_count += 1
                 self.log.error(invalid_reason)
                 continue
 
-            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: True, ERRORS: None})
+            self.fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: None, ERRORS: None, SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)})
         # save md5 cache to file
         if not self.from_s3:
             dump_data_to_csv(self.md5_cache, self.md5_cache_file)
-        "Validating file integrity succeeded"
         return True
     
+    # validate file name listed manifest
+    def validate_file_name(self):
+        msg = None
+        is_valid = True
+        line_num = 2
+        file_name_config = self.configs.get(FILE_NAME_FIELD)
+        md5_config = self.configs.get(FILE_MD5_FIELD)
+        self.log.info("Start validating file names listed in pre-manifest:")
+        for row in self.manifest_rows:
+            file_name = row[file_name_config]
+            if not file_name or not file_name.strip():
+                msg = f"Line {line_num}: File name is empty!"
+                is_valid = False
+                self.log.error(msg)
+            md5 = row[md5_config]
+            # check if file name is unique by count the file name
+            same_file_name_list  = [file for file in self.manifest_rows if file[file_name_config] == file_name and file[md5_config] != md5]
+            if len(same_file_name_list) > 0:
+                msg = f"Line {line_num}: File name {file_name} is not unique in the manifest!"
+                is_valid = False
+                self.log.error(msg)
+        
+            # check if file name only contain ASCII characters
+            if not file_name.isascii():
+                msg = f"Line {line_num}: File name {file_name} contains non-ASCII characters!"
+                is_valid = False
+                self.log.error(msg)
+
+            # check file name is a absolute path
+            if os.path.isabs(file_name):
+                msg = f'Line {line_num}: File name "{file_name}" is invalid, no absolute path allowed!'
+                is_valid = False
+                self.log.error(msg)
+
+            # check if file name contains reserved or illegal characters, /, \, :, *, ?, ", <, >, and |
+            if re.search(r'[:*?"<>|]', file_name):
+                msg = f"Line {line_num}: File name {file_name} contains invalid characters!"
+                is_valid = False
+                self.log.error(msg)
+
+            line_num += 1
+        self.log.info("Completed validating file names listed in pre-manifest.")
+        return is_valid
+
     #public function to read pre-manifest and return list of file records 
     def read_manifest(self):
         files_info = []
@@ -166,30 +222,35 @@ class FileValidator:
             finally:
                 if s3_bucket:
                     s3_bucket.close()
-
         try:
-            with open(self.pre_manifest) as pre_m:
+            with open(self.pre_manifest, mode='r', encoding='utf-8') as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
                 if not self.field_names:
                     self.field_names = clean_up_strs(reader.fieldnames)
                 for info in reader:
                     file_info = clean_up_key_value(info)
                     manifest_rows.append(file_info)
-                    file_name = file_info[self.configs.get(FILE_NAME_FIELD)]
+                    file_name = file_info.get(self.configs.get(FILE_NAME_FIELD))
                     file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
                     if self.has_file_id is None:
                         self.has_file_id = self.configs.get(FILE_ID_FIELD) in info.keys()
                     files_dict.update({file_name: {
                         FILE_ID_DEFAULT: file_id,
                         FILE_NAME_DEFAULT: file_name,
-                        FILE_SIZE_DEFAULT: file_info[self.configs.get(FILE_SIZE_FIELD)],
-                        MD5_DEFAULT: file_info[self.configs.get(FILE_MD5_FIELD)]
+                        FILE_SIZE_DEFAULT: file_info.get(self.configs.get(FILE_SIZE_FIELD)),
+                        MD5_DEFAULT: file_info.get(self.configs.get(FILE_MD5_FIELD))
                     }})
             files_info  =  list(files_dict.values())
             self.manifest_rows = manifest_rows
+
+        except UnicodeDecodeError as ue:
+            # self.log.debug(ue)
+            self.log.exception(f"Reading manifest failed - manifest file contains non-ASCII characters.")
+            return []
         except Exception as e:
-            self.log.debug(e)
+            # self.log.debug(e)
             self.log.exception(f"Reading manifest failed - internal error. Please try again and contact the helpdesk if this error persists.")
+            return []
         return files_info
     """
     validate file id format
@@ -248,25 +309,25 @@ Validate file size and md5
 def validate_data_file(file_info, file_id, size_info, file_path, fileList, md5_cache, invalid_reason, log):
     if not os.path.isfile(file_path):
         invalid_reason += f"File {file_path} does not exist!"
-        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: file_info[SUBFOLDER_FILE_NAME]})
         log.error(invalid_reason)
         return False
     file_size = os.path.getsize(file_path)
     if file_size != size_info:
         invalid_reason += f"Real file size {file_size} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {file_info[FILE_SIZE_DEFAULT]}!"
-        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: invalid_reason})
+        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: invalid_reason, SUBFOLDER_FILE_NAME: file_info[SUBFOLDER_FILE_NAME]})
         log.error(invalid_reason)
         return False
     md5_info = file_info[MD5_DEFAULT] 
     if not md5_info:
         invalid_reason += f"MD5 of {file_info[FILE_NAME_DEFAULT]} is not set in the pre-manifest!"
-        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason]})
+        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path,  FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: file_info[MD5_DEFAULT], SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: file_info[SUBFOLDER_FILE_NAME]})
         log.error(invalid_reason)
         return False
     md5sum = get_file_md5(file_path, md5_cache, file_size, log)
     if md5_info != md5sum:
         invalid_reason += f"Real file md5 {md5sum} of file {file_info[FILE_NAME_DEFAULT]} does not match with that in manifest {md5_info}!"
-        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason]})
+        fileList.append({FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: file_info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, SUCCEEDED: False, ERRORS: [invalid_reason], SUBFOLDER_FILE_NAME: file_info[SUBFOLDER_FILE_NAME]})
         log.error(invalid_reason)
         return False
     return True

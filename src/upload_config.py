@@ -1,17 +1,18 @@
 import argparse
 import os
 import yaml
-import sys
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, RETRIES, OVERWRITE, \
-    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3
+    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3, HEARTBEAT_INTERVAL_CONFIG, CLI_VERSION, CURRENT_UPLOADER_VERSION_CONFIG
 from bento.common.utils import get_logger
-from common.utils import clean_up_key_value
-
+from common.graphql_client import APIInvoker
+from common.utils import clean_up_key_value, compare_version
+CLI_VERSION_API = "https://hub.datacommons.cancer.gov/api/graphql"
 class Config():
     def __init__(self):
         self.log = get_logger('Upload Config')
         parser = argparse.ArgumentParser(description='Upload files to AWS s3 bucket')
+        parser.add_argument('-v', '--version', action='store_true', help='Show version and continue')
         parser.add_argument('-a', '--api-url', help='API endpoint URL, required')
         parser.add_argument('-k', '--token', help='API token string, required')
         parser.add_argument('-u', '--submission', help='submission ID, required')
@@ -22,14 +23,13 @@ class Config():
         #args for data file type
         parser.add_argument('-f', '--manifest', help='path to manifest file, conditional required when type = “data file"')
 
-        parser.add_argument('-r', '--retries', default=3, type=int, help='file uploading retries, optional, default value is 3')
+        parser.add_argument('-r', '--retries', type=int, help='file uploading retries, optional, default value is 3')
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
-       
+        
         args = parser.parse_args()
         self.data = {}
-
         if args.config:
             if not os.path.isfile(args.config.strip()):
                 self.log.critical(f'Configuration file “{args.config}” is not readable. Please make sure the path is correct and the file is readable.')
@@ -72,15 +72,17 @@ class Config():
             self.log.critical(f'Please provide “submission” (submission ID) in configuration file or command line argument.')
             return False
 
-        retry = self.data.get(RETRIES, 3) #default value is 3
-        if isinstance(retry, str):
+        retry = self.data.get(RETRIES) 
+        if not retry:
+            self.data[RETRIES] = 3 #default value is 3
+        elif isinstance(retry, str):
             if not retry.isdigit():
-                self.log.critical(f'Configuration error in “retries”: “{retry}” is not a valid integer.')
-                return False
+                self.log.warning(f'Configuration warning in “retries”: “{retry}” is not a valid integer. It is set to 3.')
+                self.data[RETRIES] = 3
             else:
-                self.data[retry] =int(retry) 
+                self.data[RETRIES] =int(retry) 
         else:
-            self.data[RETRIES] =int(retry) 
+            self.data[RETRIES] =int(retry)
 
         overwrite = self.data.get(OVERWRITE, False) #default value is False
         if isinstance(overwrite, str):
@@ -107,6 +109,8 @@ class Config():
                     self.log.critical(f'Please provide “manifest” in configuration file or command line argument.')
                     return False
                 if not manifest.startswith(S3_START):
+                    if not "/" in manifest or not "\\" in manifest:  # user only put file name but not path
+                        manifest = os.path.join("./", manifest)
                     if not os.path.isfile(manifest): 
                         self.log.critical(f'Manifest file “{manifest}” is not readable. Please make sure the path is correct and the file is readable.')
                         return False
@@ -150,7 +154,20 @@ class Config():
         omit_dcf_prefix = data_file_config.get(OMIT_DCF_PREFIX.replace("-", "_"))
         self.data[OMIT_DCF_PREFIX] = False if omit_dcf_prefix is None else omit_dcf_prefix
 
+        heartbeat_interval = data_file_config.get(HEARTBEAT_INTERVAL_CONFIG)
+        self.data[HEARTBEAT_INTERVAL_CONFIG] = heartbeat_interval if heartbeat_interval else 300 #5min
+
         return True
+    
+    def check_version(self):
+        configs = self.data if self.data.get(API_URL) else {API_URL: CLI_VERSION_API}
+        apiInvoker = APIInvoker(configs)
+        result, available_version = apiInvoker.get_cli_version()
+        if not result:
+            msg = f"Failed to check CLI version, can't retrieve configuration from API: {CLI_VERSION_API}"
+            return -1, msg
+        apiInvoker = None
+        return compare_version(available_version, CLI_VERSION)
 
 
 
