@@ -2,7 +2,7 @@
 import os
 
 from boto3.s3.transfer import TransferConfig
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, SSLError
 from bento.common.utils import get_logger, format_bytes, removeTrailingSlash, get_md5_hex_n_base64
 from common.progress_bar import create_progress_bar, ProgressCallback
 from common.graphql_client import APIInvoker
@@ -38,7 +38,7 @@ class Copier:
         self.bucket_name = bucket_name
         self.bucket = S3Bucket()
         #set s3 client based on credential and bucket.
-        self.bucket.set_s3_client(self.bucket_name, configs[TEMP_CREDENTIAL])
+        self.bucket.set_s3_client(self.bucket_name, configs)
          
         if prefix and isinstance(prefix, str):
             self.prefix = removeTrailingSlash(prefix)
@@ -50,17 +50,6 @@ class Copier:
         self.files_copied = 0
         self.files_not_found = set()
         self.type = configs.get(UPLOAD_TYPE)
-
-    def refreshToken(self):
-        apiInvoker = APIInvoker(self.configs)
-        if apiInvoker.get_temp_credential():
-            temp_credential = apiInvoker.cred
-            self.configs[TEMP_CREDENTIAL] = temp_credential
-            return True
-        else:
-            self.log.error("Failed to upload files: can't refresh temp credential!")
-            return False
-    
 
     def set_prefix(self, raw_prefix):
         prefix = removeTrailingSlash(raw_prefix)
@@ -112,17 +101,20 @@ class Copier:
             return succeed
         except ClientError as ce:
             self.log.debug(ce)
-
             #handle temp credential expired error to refresh token for next file.
             if ce.response[u'Error'][u'Code'] == 'ExpiredToken':
                 self.log.exception(f'Uploading “{file_name}” failed - internal error: temporary credential expired. Please try again and contact the helpdesk if this error persists.')
                 file_info[ERRORS] = [f'Uploading “{file_name}” failed - internal error: temporary credential expired.']
-                if self.refreshToken(): 
-                    self.bucket.set_s3_client(self.bucket_name, self.configs[TEMP_CREDENTIAL])
+                self.bucket.refreshToken(self.configs)
             else:
                 self.log.exception(f"Uploading “{file_name}” failed - internal error. Please try again and contact the helpdesk if this error persists..")
                 file_info[ERRORS] = [f'Uploading “{file_name}” failed - network error.']
-
+            return {self.STATUS: False}
+        except SSLError as se:  # Catch SSL errors it occurred during multipart upload if temp token is expired in prod.
+            self.log.debug(se)
+            self.log.exception(f'Uploading “{file_name}” failed - internal error: temporary credential expired. Please try again and contact the helpdesk if this error persists.')
+            file_info[ERRORS] = [f'Uploading “{file_name}” failed - internal error: temporary credential expired.']
+            self.bucket.refreshToken(self.configs)
             return {self.STATUS: False}
         except Exception as e:
             self.log.debug(e)
@@ -132,7 +124,7 @@ class Copier:
 
     def _upload_obj(self, org_url, key, org_size, file_name):
 
-        if self.type == TYPE_FILE or org_size > self.SINGLE_PUT_LIMIT: #study files upload (big files)
+        if self.type == TYPE_FILE or org_size > self.SINGLE_PUT_LIMIT: #study files upload (big files)    
             parts = int(org_size) // self.MULTI_PART_CHUNK_SIZE
             chunk_size = self.MULTI_PART_CHUNK_SIZE if parts < self.PARTS_LIMIT else int(org_size) // self.PARTS_LIMIT
             t_config = TransferConfig(multipart_threshold=self.MULTI_PART_THRESHOLD,
@@ -140,7 +132,12 @@ class Copier:
             with open(org_url, 'rb') as stream, create_progress_bar() as progress:
                 task_id = progress.add_task("Uploading...", total=org_size)
                 progress_callback = ProgressCallback(org_size, progress, task_id)
-                self.bucket.upload_file_obj(stream, key, progress_callback, file_name, t_config)
+                if org_size <= self.MULTI_PART_CHUNK_SIZE * 50: # less than or equal to 5G, call auto multipart upload
+                    self.bucket.upload_file_obj(stream, key, progress_callback, file_name, t_config)
+                else:
+                    # call manual multipart upload if size > 5G
+                    self.bucket.upload_large_file_partly(stream, key, org_size, progress_callback)
+
         else: #small file
             md5_obj = get_md5_hex_n_base64(org_url)
             md5_base64 = md5_obj['base64']

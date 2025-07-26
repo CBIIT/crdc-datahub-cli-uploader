@@ -16,7 +16,7 @@ class APIInvoker:
         self.type = configs.get(UPLOAD_TYPE)
 
     #1) get sts temp credential for file/metadata uploading to S3 bucket
-    def get_temp_credential(self):
+    def get_temp_credential(self, silent=False):
         self.cred = None
         body = f"""
         mutation {{
@@ -30,21 +30,25 @@ class APIInvoker:
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
-            self.log.info(f"get_temp_credential response status code: {status}.")
+            if not silent:
+                self.log.info(f"get_temp_credential response status code: {status}.")
             if status == 200: 
                 results = response.json()
                 if results.get("errors"):
-                    self.log.error(f'Retrieve temporary credential failed - {results.get("errors")[0].get("message")}.')  
+                    if not silent:
+                        self.log.error(f'Retrieve temporary credential failed: {results.get("errors")[0].get("message")}.')
                     return False
                 else:
                     self.cred = results.get("data").get("createTempCredentials")
                     return True  
             else:
-                self.log.error(f'Retrieve temporary credential failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
+                if not silent:
+                    self.log.error(f'Retrieve temporary credential failed (code: {status}) - internal error. Please try again and contact the helpdesk if this error persists.')
                 return False
 
         except Exception as e:
-            self.log.exception(f'Retrieve temporary credential failed - internal error. Please try again and contact the helpdesk if this error persists.')
+            if not silent:
+                self.log.error(f'Retrieve temporary credential failed - internal error. Please try again and contact the helpdesk if this error persists.')
             return False
 
 

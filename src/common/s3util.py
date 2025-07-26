@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 import os
+import math
 import boto3
+import datetime
 # from boto3.s3.transfer import TransferConfig, S3Transfer
+from typing import BinaryIO, List
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 from botocore.exceptions import ClientError
 
 from bento.common.utils import get_logger
-from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN
+from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN, TEMP_CREDENTIAL, TEMP_TOKEN_DURATION
 from common.progress_bar import create_progress_bar, ProgressCallback
+from common.graphql_client import APIInvoker  # Add this import if APIInvoker is defined in common/api_invoker.py
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
 SINGLE_PUT_LIMIT = 4_500_000_000
@@ -15,11 +22,17 @@ SINGLE_PUT_LIMIT = 4_500_000_000
 class S3Bucket:
     def __init__(self):
         self.log = get_logger('S3 Bucket')
+        self.parts: List[dict] = []
+        self.configs = None
 
-    def set_s3_client(self, bucket, credentials):
+    def set_s3_client(self, bucket, configs):
         self.bucket_name = bucket
-        
+        self.configs = configs
+        credentials = configs.get(TEMP_CREDENTIAL) if configs else None
         if credentials:
+            # set expiration datetime to current datetime plus configured duration
+            duration = 3600 if not configs.get(TEMP_TOKEN_DURATION) else int(configs[TEMP_TOKEN_DURATION]) * 3600
+            self.expiration = datetime.datetime.utcnow() + datetime.timedelta(seconds=duration)
             self.credential = credentials
             session = boto3.session.Session(
                 aws_access_key_id=credentials[ACCESS_KEY_ID],
@@ -29,13 +42,23 @@ class S3Bucket:
             self.client = session.client('s3')
             self.s3 = session.resource('s3')
             self.bucket = self.s3.Bucket(bucket)
-            
         else:
             self.client = boto3.client('s3')
             self.s3 = boto3.resource('s3')
             self.bucket = self.s3.Bucket(bucket)
             self.credential = None
-        
+    
+    def refreshToken(self):
+        apiInvoker = APIInvoker(self.configs)
+        if apiInvoker.get_temp_credential(True):
+            temp_credential = apiInvoker.cred
+            self.configs[TEMP_CREDENTIAL] = temp_credential
+            self.set_s3_client(self.bucket_name, self.configs)
+            return True
+        else:
+            self.log.error("Failed to upload files: can't refresh temp credential!")
+            return False   
+    
     def file_exists_on_s3(self, key):
         '''
         Check if file exists in S3, return True only if file exists
@@ -83,8 +106,6 @@ class S3Bucket:
                     progress.update(task, advance=len(chunk))
         finally:
             progress.stop()
-
-
 
     def upload_file_obj(self, stream, key, progress_callback, file_name, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
         extra_args.update({'ContentDisposition': f'attachment; filename="{file_name}"'})
@@ -179,6 +200,83 @@ class S3Bucket:
             self.client.upload_file(file_path, self.bucket_name, s3_key)
         except Exception as e:
             self.log.error("Failed to upload file.")
+   
+    # start manual multipart upload section
+    # Upload a large file (size > 5 GB) in parts
+    def upload_large_file_partly(self, fileobj: BinaryIO, key, size, progress_callback):
+        part_size = 500 * 1024 * 1024  # 500 MB
+        # max_workers = 1
+        self.failed_count = 0
+        try:
+            self.initiate_multipart_upload(key)
+            total_parts = math.ceil(size / part_size)
+            for part_number in range(1, total_parts + 1):
+                data = fileobj.read(part_size)
+                if not data:
+                    break
+                result = self.upload_part(part_number, data, key)  # must raise on error
+                self.parts.append(result)
+                progress_callback.__call__(len(data))
+                # progress.update(task_id, advance=chunk_size)
+
+            self.complete_upload(key)
+
+        except Exception as e:
+            self.log.error(f"Failed to upload large file, {e}.")
+            self.abort_upload(key)
+            raise
+        finally:
+            progress.stop()
+
+    def initiate_multipart_upload(self, key):
+        response = self.client.create_multipart_upload(Bucket=self.bucket_name, Key=key)
+        self.upload_id = response['UploadId']
+        # self.log.info(f"Initiated multipart upload with ID: {self.upload_id}")
+
+    def is_expired(self, buffer_seconds=300):
+        expired = datetime.datetime.utcnow() > (self.expiration - datetime.timedelta(seconds=buffer_seconds))
+        return expired
+
+    def upload_part(self, part_number, data, key):
+        if self.is_expired():
+            self.refreshToken()
+        try:
+            response = self.client.upload_part(
+                Bucket=self.bucket_name,
+                Key=key,
+                UploadId=self.upload_id,
+                PartNumber=part_number,
+                Body=data
+            )
+            return {
+                'PartNumber': part_number,
+                'ETag': response['ETag']
+            }
+        except Exception as e:
+            self.failed_count += 1
+            if self.failed_count > 3:
+                self.log.error(f"Failed to upload part {part_number}, {e}.")
+                self.abort_upload(key)
+                raise
+            else:
+                self.log.info(f"Retrying upload part {part_number}, attempt {self.failed_count}.")
+                return self.upload_part(part_number, data, key)
+
+    def complete_upload(self, key):
+        self.parts.sort(key=lambda x: x['PartNumber'])
+        self.client.complete_multipart_upload(
+            Bucket=self.bucket_name,
+            Key=key,
+            UploadId=self.upload_id,
+            MultipartUpload={'Parts': self.parts}
+        )
+        self.log.info("Upload completed successfully.")
+
+    def abort_upload(self, key):
+        if self.upload_id:
+            self.client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=self.upload_id)
+            self.log.info("Upload aborted.")
+    # end manual multipart upload section
 
     def close(self):
         self.client.close()
