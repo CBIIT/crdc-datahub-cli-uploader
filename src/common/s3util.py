@@ -3,9 +3,7 @@ import os
 import math
 import boto3
 import datetime
-# from boto3.s3.transfer import TransferConfig, S3Transfer
 from typing import BinaryIO, List
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 
 from botocore.exceptions import ClientError
@@ -13,7 +11,7 @@ from botocore.exceptions import ClientError
 from bento.common.utils import get_logger
 from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN, TEMP_CREDENTIAL, TEMP_TOKEN_EXPIRATION
 from common.progress_bar import create_progress_bar, ProgressCallback
-from common.graphql_client import APIInvoker  # Add this import if APIInvoker is defined in common/api_invoker.py
+from common.graphql_client import APIInvoker
 from common.utils import convert_string_to_date_time
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
@@ -276,12 +274,10 @@ class S3Bucket:
             UploadId=self.upload_id,
             MultipartUpload={'Parts': self.parts}
         )
-        self.log.info("Upload completed successfully.")
 
     def abort_upload(self, key):
         if self.upload_id:
             self.client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=self.upload_id)
-            self.log.info("Upload aborted.")
     # end manual multipart upload section
 
     def close(self):
