@@ -9,7 +9,7 @@ from common.graphql_client import APIInvoker
 from common.s3util import S3Bucket
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, TEMP_CREDENTIAL, FILE_PATH, \
     ERRORS, SKIPPED, SUBFOLDER_FILE_NAME
-from common.utils import get_exception_msg
+from common.utils import get_exception_msg, format_size
 class Copier:
 
     TRANSFER_UNIT_MB = 1024 * 1024
@@ -70,7 +70,7 @@ class Copier:
             self.log.info(f'Processing {org_url}')
             key = f'{self.prefix}/{file_name}'
             org_size = file_info[FILE_SIZE_DEFAULT]
-            self.log.info(f'Original file size: {format_bytes(org_size)}.')
+            self.log.info(f'Original file size: {format_size(org_size)}.')
 
             succeed = {self.STATUS: True,
                        self.NAME: file_name,
