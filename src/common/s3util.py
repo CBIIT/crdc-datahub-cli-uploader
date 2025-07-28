@@ -223,7 +223,6 @@ class S3Bucket:
                 result = self.upload_part(part_number, data, key)  # must raise on error
                 self.parts.append(result)
                 progress_callback.__call__(len(data))
-                # progress.update(task_id, advance=chunk_size)
 
             self.complete_upload(key)
 
