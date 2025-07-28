@@ -105,7 +105,7 @@ class Copier:
             if ce.response[u'Error'][u'Code'] == 'ExpiredToken':
                 self.log.exception(f'Uploading “{file_name}” failed - internal error: temporary credential expired. Please try again and contact the helpdesk if this error persists.')
                 file_info[ERRORS] = [f'Uploading “{file_name}” failed - internal error: temporary credential expired.']
-                self.bucket.refreshToken(self.configs)
+                self.bucket.refreshToken()
             else:
                 self.log.exception(f"Uploading “{file_name}” failed - internal error. Please try again and contact the helpdesk if this error persists..")
                 file_info[ERRORS] = [f'Uploading “{file_name}” failed - network error.']
@@ -114,7 +114,7 @@ class Copier:
             self.log.debug(se)
             self.log.exception(f'Uploading “{file_name}” failed - internal error: temporary credential expired. Please try again and contact the helpdesk if this error persists.')
             file_info[ERRORS] = [f'Uploading “{file_name}” failed - internal error: temporary credential expired.']
-            self.bucket.refreshToken(self.configs)
+            self.bucket.refreshToken()
             return {self.STATUS: False}
         except Exception as e:
             self.log.debug(e)

@@ -172,7 +172,13 @@ def compare_version(available_version, self_version):
         return 0, msg
     else:
         return 1, msg
-   
+
+def convert_string_to_date_time(date_string, format = "%Y-%m-%dT%H:%M:%S.%fZ"):
+    """
+    convert date to format
+    """
+    return datetime.strptime(date_string, format)
+
 
                            
     

@@ -62,3 +62,4 @@ CURRENT_UPLOADER_VERSION_CONFIG = "current_uploader_version"
 SUBFOLDER_FILE_NAME = "internal_file_name"
 SEPARATOR_CHAR = '\t'
 TEMP_TOKEN_DURATION = "temp_token_duration"
+TEMP_TOKEN_EXPIRATION = "expiration"

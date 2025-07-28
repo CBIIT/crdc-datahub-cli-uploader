@@ -5,16 +5,16 @@ import boto3
 import datetime
 # from boto3.s3.transfer import TransferConfig, S3Transfer
 from typing import BinaryIO, List
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
+import time
 
 from botocore.exceptions import ClientError
 
 from bento.common.utils import get_logger
-from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN, TEMP_CREDENTIAL, TEMP_TOKEN_DURATION
+from common.constants import ACCESS_KEY_ID, SECRET_KEY, SESSION_TOKEN, TEMP_CREDENTIAL, TEMP_TOKEN_EXPIRATION
 from common.progress_bar import create_progress_bar, ProgressCallback
 from common.graphql_client import APIInvoker  # Add this import if APIInvoker is defined in common/api_invoker.py
+from common.utils import convert_string_to_date_time
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
 SINGLE_PUT_LIMIT = 4_500_000_000
@@ -24,21 +24,21 @@ class S3Bucket:
         self.log = get_logger('S3 Bucket')
         self.parts: List[dict] = []
         self.configs = None
+        self.expiration = None
 
     def set_s3_client(self, bucket, configs):
         self.bucket_name = bucket
         self.configs = configs
         credentials = configs.get(TEMP_CREDENTIAL) if configs else None
-        if credentials:
-            # set expiration datetime to current datetime plus configured duration
-            duration = 3600 if not configs.get(TEMP_TOKEN_DURATION) else int(configs[TEMP_TOKEN_DURATION]) * 3600
-            self.expiration = datetime.datetime.utcnow() + datetime.timedelta(seconds=duration)
+        if credentials:           
             self.credential = credentials
             session = boto3.session.Session(
                 aws_access_key_id=credentials[ACCESS_KEY_ID],
                 aws_secret_access_key=credentials[SECRET_KEY],
                 aws_session_token=credentials[SESSION_TOKEN]
             )
+            self.expiration = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=3600) \
+                if not credentials.get(TEMP_TOKEN_EXPIRATION) else convert_string_to_date_time(credentials[TEMP_TOKEN_EXPIRATION])
             self.client = session.client('s3')
             self.s3 = session.resource('s3')
             self.bucket = self.s3.Bucket(bucket)
@@ -108,6 +108,8 @@ class S3Bucket:
             progress.stop()
 
     def upload_file_obj(self, stream, key, progress_callback, file_name, config=None, extra_args={'ACL': BUCKET_OWNER_ACL}):
+        if self.is_token_expired():
+            self.refreshToken()
         extra_args.update({'ContentDisposition': f'attachment; filename="{file_name}"'})
         self.bucket.upload_fileobj(
             stream, key, ExtraArgs=extra_args, Config=config, Callback=progress_callback)
@@ -200,7 +202,14 @@ class S3Bucket:
             self.client.upload_file(file_path, self.bucket_name, s3_key)
         except Exception as e:
             self.log.error("Failed to upload file.")
-   
+
+    # check if token is expired with buffer seconds 
+    def is_token_expired(self, buffer_seconds=300):
+        expiration = self.expiration
+        if expiration.tzinfo is None:
+            expiration = expiration.replace(tzinfo=datetime.timezone.utc)
+        return datetime.datetime.now(datetime.timezone.utc) > (expiration - datetime.timedelta(seconds=buffer_seconds))
+
     # start manual multipart upload section
     # Upload a large file (size > 5 GB) in parts
     def upload_large_file_partly(self, fileobj: BinaryIO, key, size, progress_callback):
@@ -225,20 +234,16 @@ class S3Bucket:
             self.log.error(f"Failed to upload large file, {e}.")
             self.abort_upload(key)
             raise
-        finally:
-            progress.stop()
 
     def initiate_multipart_upload(self, key):
         response = self.client.create_multipart_upload(Bucket=self.bucket_name, Key=key)
+        if 'UploadId' not in response:
+            raise Exception("Failed to initiate multipart upload.")
+        
         self.upload_id = response['UploadId']
-        # self.log.info(f"Initiated multipart upload with ID: {self.upload_id}")
-
-    def is_expired(self, buffer_seconds=300):
-        expired = datetime.datetime.utcnow() > (self.expiration - datetime.timedelta(seconds=buffer_seconds))
-        return expired
 
     def upload_part(self, part_number, data, key):
-        if self.is_expired():
+        if self.is_token_expired():
             self.refreshToken()
         try:
             response = self.client.upload_part(
@@ -259,7 +264,8 @@ class S3Bucket:
                 self.abort_upload(key)
                 raise
             else:
-                self.log.info(f"Retrying upload part {part_number}, attempt {self.failed_count}.")
+                # wait 5minutes before retrying
+                time.sleep(300)  # wait for 5 minutes
                 return self.upload_part(part_number, data, key)
 
     def complete_upload(self, key):

@@ -23,7 +23,8 @@ class APIInvoker:
             createTempCredentials (submissionID: \"{self.submissionId}\") {{
                 accessKeyId,
                 secretAccessKey,
-                sessionToken
+                sessionToken, 
+                expiration
             }}
         }}
         """
