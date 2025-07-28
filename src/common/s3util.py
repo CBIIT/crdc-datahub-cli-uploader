@@ -212,8 +212,6 @@ class S3Bucket:
     # Upload a large file (size > 5 GB) in parts
     def upload_large_file_partly(self, fileobj: BinaryIO, key, size, progress_callback):
         part_size = 500 * 1024 * 1024  # 500 MB
-        # max_workers = 1
-        self.failed_count = 0
         try:
             self.initiate_multipart_upload(key)
             total_parts = math.ceil(size / part_size)
@@ -240,7 +238,7 @@ class S3Bucket:
         
         self.upload_id = response['UploadId']
 
-    def upload_part(self, part_number, data, key):
+    def upload_part(self, part_number, data, key, failed_count = 0):
         if self.is_token_expired():
             self.refreshToken()
         try:
@@ -256,15 +254,15 @@ class S3Bucket:
                 'ETag': response['ETag']
             }
         except Exception as e:
-            self.failed_count += 1
-            if self.failed_count > 3:
+            failed_count += 1
+            if failed_count > 2:
                 self.log.error(f"Failed to upload part {part_number}, {e}.")
                 self.abort_upload(key)
                 raise
             else:
                 # wait 5minutes before retrying
                 time.sleep(300)  # wait for 5 minutes
-                return self.upload_part(part_number, data, key)
+                return self.upload_part(part_number, data, key, failed_count)
 
     def complete_upload(self, key):
         self.parts.sort(key=lambda x: x['PartNumber'])
