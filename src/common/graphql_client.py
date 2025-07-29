@@ -5,7 +5,6 @@ import json
 from bento.common.utils import get_logger
 from common.constants import UPLOAD_TYPE, API_URL, SUBMISSION_ID, TOKEN
 from common.utils import get_exception_msg
-
 class APIInvoker:
     def __init__(self, configs):
         self.token = configs.get(TOKEN)
@@ -51,9 +50,9 @@ class APIInvoker:
     #2) create upload batch
     def create_batch(self, file_array):
         self.new_batch = None
+        MAX_CREATE_BATCH_PAYLOAD_SIZE = 1024 * 1024  # 1MB
         #adjust file list to match the graphql param.
-        # file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
-        file_array = json.dumps(file_array)
+        file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
         body = f"""
         mutation {{
             createBatch (
@@ -76,6 +75,11 @@ class APIInvoker:
             }}
         }}
         """
+        # check the body size, if the size is too large 1MB in binary, it will cause the request to fail.
+        self.log.info(f"create batch body size: {len(body)}")
+        if len(body) > MAX_CREATE_BATCH_PAYLOAD_SIZE:
+            self.log.error(f"create batch body size is too large: {len(body)}")
+            return False
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
@@ -103,6 +107,7 @@ class APIInvoker:
     #3) update upload batch
     def update_batch(self, batchID, uploaded_files, uploading="false"):
         self.batch = None
+        MAX_UPDATE_BATCH_PAYLOAD_SIZE = 1024 * 1024 * 10  # 10MB
         #adjust file list to match the graphql param.
         file_array = []
         if uploaded_files:
@@ -125,6 +130,11 @@ class APIInvoker:
             }}
         }}
         """
+         # check the body size, if the size is too large 1MB in binary, it will cause the request to fail.
+        self.log.info(f"update batch body size: {len(body)}")
+        if len(body) > MAX_UPDATE_BATCH_PAYLOAD_SIZE:
+            self.log.error(f"update batch body size is too large: {len(body)}")
+            return False
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
