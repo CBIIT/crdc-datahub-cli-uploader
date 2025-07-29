@@ -210,8 +210,7 @@ class S3Bucket:
 
     # start manual multipart upload section
     # Upload a large file (size > 5 GB) in parts
-    def upload_large_file_partly(self, fileobj: BinaryIO, key, size, progress_callback):
-        part_size = 500 * 1024 * 1024  # 500 MB
+    def upload_large_file_partly(self, fileobj: BinaryIO, key, size, progress_callback, part_size):
         self.parts = []
         try:
             self.initiate_multipart_upload(key)
@@ -222,7 +221,7 @@ class S3Bucket:
                     break
                 result = self.upload_part(part_number, data, key)  # must raise on error
                 self.parts.append(result)
-                progress_callback.__call__(len(data))
+                progress_callback(len(data))
 
             self.complete_upload(key)
 
