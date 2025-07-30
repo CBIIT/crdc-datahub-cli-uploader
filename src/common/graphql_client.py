@@ -52,7 +52,7 @@ class APIInvoker:
         self.new_batch = None
         MAX_CREATE_BATCH_PAYLOAD_SIZE = 1024 * 1024 * 5  # 5MB. The create batch payload size is half to 75% of updated batch size.
         #adjust file list to match the graphql param.
-        file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
+        file_array = json.dumps(file_array)
         body = f"""
         mutation {{
             createBatch (
