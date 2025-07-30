@@ -15,7 +15,8 @@ from common.graphql_client import APIInvoker
 from common.utils import convert_string_to_date_time
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
-SINGLE_PUT_LIMIT = 4_500_000_000
+SINGLE_PUT_LIMIT = 5 * 1024 * 1024 * 1024  # 5GB
+MAX_PART_NUMBER = 9999
 
 class S3Bucket:
     def __init__(self):
@@ -212,7 +213,7 @@ class S3Bucket:
     # Upload a large file (size > 5 GB) in parts
     def upload_large_file_partly(self, fileobj: BinaryIO, key, size, progress_callback):
         self.parts = []
-        part_size = 1024 * 1024 * 100  # set the part size to 100MB since the maximum parts allowed is 10000
+        part_size = self.calculate_part_size(size)
         try:
             self.initiate_multipart_upload(key)
             total_parts = math.ceil(size / part_size)
@@ -276,6 +277,14 @@ class S3Bucket:
     def abort_upload(self, key):
         if self.upload_id:
             self.client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=self.upload_id)
+
+    def calculate_part_size(self, file_size):
+        """
+        Calculate the part size based on the file size.
+        The part size should be calculated for files larger than 5GB.
+        """
+        min_part_size = 1024 * 1024 * 10 # 10MB 
+        return max(min_part_size, math.ceil(file_size / MAX_PART_NUMBER)) if file_size > SINGLE_PUT_LIMIT else file_size  
     # end manual multipart upload section
 
     def close(self):
