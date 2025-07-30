@@ -263,6 +263,7 @@ class S3Bucket:
             else:
                 # wait 5minutes before retrying
                 time.sleep(300)  # wait for 5 minutes
+                self.set_s3_client(self.bucket_name, self.configs) #reset the client if client connection is lost
                 return self.upload_part(part_number, data, key, failed_count)
 
     def complete_upload(self, key):
