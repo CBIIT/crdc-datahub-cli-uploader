@@ -136,7 +136,7 @@ class Copier:
                     self.bucket.upload_file_obj(stream, key, progress_callback, file_name, t_config)
                 else:
                     # call manual multipart upload if size > 5G
-                    self.bucket.upload_large_file_partly(stream, key, org_size, progress_callback, chunk_size)
+                    self.bucket.upload_large_file_partly(stream, key, org_size, progress_callback)
 
         else: #small file
             md5_obj = get_md5_hex_n_base64(org_url)
