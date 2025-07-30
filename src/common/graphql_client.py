@@ -135,7 +135,7 @@ class APIInvoker:
         body_size = len(body.encode("utf-8"))
         self.log.info(f"update batch body size: {body_size}")
         if body_size > MAX_UPDATE_BATCH_PAYLOAD_SIZE:
-            self.log.error(f"create batch body size is too large: {body_size} with {len(file_array)} files, please reduce the number of files for one batch.")
+            self.log.error(f"update batch body size is too large: {body_size} with {len(file_array)} files, please reduce the number of files for one batch.")
             return False
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
