@@ -15,7 +15,8 @@ from common.graphql_client import APIInvoker
 from common.utils import convert_string_to_date_time
 
 BUCKET_OWNER_ACL = 'bucket-owner-full-control'
-SINGLE_PUT_LIMIT = 4_500_000_000
+SINGLE_PUT_LIMIT = 5 * 1024 * 1024 * 1024  # 5GB
+MAX_PART_NUMBER = 9999
 
 class S3Bucket:
     def __init__(self):
@@ -211,8 +212,8 @@ class S3Bucket:
     # start manual multipart upload section
     # Upload a large file (size > 5 GB) in parts
     def upload_large_file_partly(self, fileobj: BinaryIO, key, size, progress_callback):
-        part_size = 500 * 1024 * 1024  # 500 MB
         self.parts = []
+        part_size = self.calculate_part_size(size)
         try:
             self.initiate_multipart_upload(key)
             total_parts = math.ceil(size / part_size)
@@ -222,7 +223,7 @@ class S3Bucket:
                     break
                 result = self.upload_part(part_number, data, key)  # must raise on error
                 self.parts.append(result)
-                progress_callback.__call__(len(data))
+                progress_callback(len(data))
 
             self.complete_upload(key)
 
@@ -262,6 +263,7 @@ class S3Bucket:
             else:
                 # wait 5minutes before retrying
                 time.sleep(300)  # wait for 5 minutes
+                self.set_s3_client(self.bucket_name, self.configs) #reset the client if client connection is lost
                 return self.upload_part(part_number, data, key, failed_count)
 
     def complete_upload(self, key):
@@ -276,6 +278,14 @@ class S3Bucket:
     def abort_upload(self, key):
         if self.upload_id:
             self.client.abort_multipart_upload(Bucket=self.bucket_name, Key=key, UploadId=self.upload_id)
+
+    def calculate_part_size(self, file_size):
+        """
+        Calculate the part size based on the file size.
+        The part size should be calculated for files larger than 5GB.
+        """
+        min_part_size = 1024 * 1024 * 10 # 10MB 
+        return max(min_part_size, math.ceil(file_size / MAX_PART_NUMBER))
     # end manual multipart upload section
 
     def close(self):
