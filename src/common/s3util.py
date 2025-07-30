@@ -284,7 +284,7 @@ class S3Bucket:
         The part size should be calculated for files larger than 5GB.
         """
         min_part_size = 1024 * 1024 * 10 # 10MB 
-        return max(min_part_size, math.ceil(file_size / MAX_PART_NUMBER)) if file_size > SINGLE_PUT_LIMIT else file_size  
+        return max(min_part_size, math.ceil(file_size / MAX_PART_NUMBER))
     # end manual multipart upload section
 
     def close(self):
