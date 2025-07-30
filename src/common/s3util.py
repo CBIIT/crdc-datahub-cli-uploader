@@ -212,7 +212,7 @@ class S3Bucket:
     # Upload a large file (size > 5 GB) in parts
     def upload_large_file_partly(self, fileobj: BinaryIO, key, size, progress_callback):
         self.parts = []
-        part_size = 1024 * 1024 * 2 #set the part size to 2MB since the maximum parts allowed is 10000
+        part_size = 1024 * 1024 * 100  # set the part size to 100MB since the maximum parts allowed is 10000
         try:
             self.initiate_multipart_upload(key)
             total_parts = math.ceil(size / part_size)
