@@ -131,7 +131,7 @@ class APIInvoker:
             }}
         }}
         """
-         # check the body size, if the size is too large 1MB in binary, it will cause the request to fail.
+         # check the body size, if the size is too large (10MB as defined by MAX_UPDATE_BATCH_PAYLOAD_SIZE), it will cause the request to fail.
         body_size = len(body.encode("utf-8"))
         self.log.info(f"update batch body size: {body_size}")
         if body_size > MAX_UPDATE_BATCH_PAYLOAD_SIZE:
