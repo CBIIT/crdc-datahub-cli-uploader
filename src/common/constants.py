@@ -64,3 +64,5 @@ SEPARATOR_CHAR = '\t'
 TEMP_UNZIP_DIR = "tmp/unzip"
 ARCHIVE_MANIFEST = "archive_manifest"
 ARCHIVE_NAME = "archive_name"
+MAX_CREATE_BATCH_PAYLOAD_SIZE = 1024 * 1024 * 5  # 5MB. The create batch payload size is half to 75% of updated batch size.
+MAX_UPDATE_BATCH_PAYLOAD_SIZE = 1024 * 1024 * 10  # 10MB
