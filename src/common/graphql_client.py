@@ -3,7 +3,7 @@
 import requests
 import json
 from bento.common.utils import get_logger
-from common.constants import UPLOAD_TYPE, API_URL, SUBMISSION_ID, TOKEN, MAX_CREATE_BATCH_PAYLOAD_SIZE, MAX_UPDATE_BATCH_PAYLOAD_SIZE
+from common.constants import UPLOAD_TYPE, API_URL, SUBMISSION_ID, TOKEN, MAX_UPDATE_BATCH_PAYLOAD_SIZE
 from common.utils import get_exception_msg
 class APIInvoker:
     def __init__(self, configs):
@@ -73,12 +73,6 @@ class APIInvoker:
             }}
         }}
         """
-        # check the body size, if the size is too large (5MB in binary), it will cause the request to fail.
-        body_size = len(body.encode("utf-8"))
-        self.log.info(f"create batch body size: {body_size}")
-        if body_size > MAX_CREATE_BATCH_PAYLOAD_SIZE:
-            self.log.error(f"create batch body size is too large: {body_size} with {len(file_array)} files, please reduce the number of files for one batch.")
-            return False
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code

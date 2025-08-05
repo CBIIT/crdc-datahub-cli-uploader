@@ -8,7 +8,7 @@ import shutil
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
     FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME,\
-    TEMP_UNZIP_DIR, ARCHIVE_MANIFEST, ARCHIVE_NAME
+    TEMP_UNZIP_DIR, ARCHIVE_MANIFEST, ARCHIVE_NAME, MAX_CREATE_BATCH_PAYLOAD_SIZE, SUBMISSION_ID
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url, dump_data_to_csv
@@ -94,6 +94,9 @@ class FileValidator:
             self.s3_bucket.set_s3_client(self.from_bucket_name, None)
         line_num = 1
         total_file_cnt = len(self.files_info)
+        result = check_payload_size(self.files_info, self.configs, self.log)
+        if not result:
+            return False
         self.log.info(f'Start to validate data files...')
         # add warning if manifest include "internal_file_name" column
         if SUBFOLDER_FILE_NAME in self.field_names:
@@ -468,3 +471,39 @@ def get_file_md5(file_path, md5_cache, file_size, log):
         md5sum = cached_md5[0]
 
     return md5sum
+
+def check_payload_size(file_info_list, configs, log):
+    """
+    Check if the payload size of files_info is within the limit.
+    If not, raise an exception.
+    """
+    file_array = [item.get(FILE_NAME_DEFAULT) for item in file_info_list]
+    submissionId = configs.get(SUBMISSION_ID)
+    type = configs.get(UPLOAD_TYPE)
+    payload= f"""
+        mutation {{
+            createBatch (
+                submissionID: \"{submissionId}\", 
+                type: \"{type}\", 
+                files: {file_array}
+            ){{
+                _id,
+                submissionID,
+                bucketName,
+                filePrefix,
+                type,
+                fileCount,
+                files {{
+                    fileID, 
+                    fileName,
+                }}
+                status,
+                createdAt
+            }}
+        }}
+        """
+    body_size = len(payload.encode("utf-8"))
+    if body_size > MAX_CREATE_BATCH_PAYLOAD_SIZE:
+        log.error(f"create batch body size is too large: {body_size} with {len(file_array)} files, please reduce the number of files for one batch.")
+        return False
+    return True
