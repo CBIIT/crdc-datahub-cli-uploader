@@ -3,9 +3,8 @@
 import requests
 import json
 from bento.common.utils import get_logger
-from common.constants import UPLOAD_TYPE, API_URL, SUBMISSION_ID, TOKEN
+from common.constants import UPLOAD_TYPE, API_URL, SUBMISSION_ID, TOKEN, MAX_UPDATE_BATCH_PAYLOAD_SIZE
 from common.utils import get_exception_msg
-
 class APIInvoker:
     def __init__(self, configs):
         self.token = configs.get(TOKEN)
@@ -55,9 +54,7 @@ class APIInvoker:
 
     #2) create upload batch
     def create_batch(self, file_array):
-        self.new_batch = None
         #adjust file list to match the graphql param.
-        # file_array = json.dumps(file_array).replace("\"fileName\"", "fileName").replace("\"size\"", "size")
         file_array = json.dumps(file_array)
         body = f"""
         mutation {{
@@ -130,6 +127,12 @@ class APIInvoker:
             }}
         }}
         """
+         # check the body size, if the size is too large (10MB as defined by MAX_UPDATE_BATCH_PAYLOAD_SIZE), it will cause the request to fail.
+        body_size = len(body.encode("utf-8"))
+        self.log.info(f"update batch body size: {body_size}")
+        if body_size > MAX_UPDATE_BATCH_PAYLOAD_SIZE:
+            self.log.error(f"update batch body size is too large: {body_size} with {len(file_array)} files, please reduce the number of files for one batch.")
+            return False
         try:
             response = requests.post(url=self.url, headers=self.headers, json={"query": body})
             status = response.status_code
