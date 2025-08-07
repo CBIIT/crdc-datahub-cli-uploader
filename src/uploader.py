@@ -65,6 +65,7 @@ def controller():
         return 1
     
     file_list = validator.fileList
+    archive_files_info = validator.archive_files_info
     if validator.invalid_count == 0:
         #step 3: create a batch
         file_array = [ item[SUBFOLDER_FILE_NAME] if item.get(SUBFOLDER_FILE_NAME) else item.get(FILE_NAME_DEFAULT) for item in file_list]
@@ -95,7 +96,7 @@ def controller():
             temp_credential = apiInvoker.cred
             configs[TEMP_CREDENTIAL] = temp_credential
             #step 5: upload all files to designated s3 bucket
-            loader = FileUploader(configs, file_list, validator.md5_cache, validator.md5_cache_file)
+            loader = FileUploader(configs, file_list, validator.md5_cache, validator.md5_cache_file, archive_files_info)
             # create upload heart beater instance
             upload_heart_beater = UploadHeartBeater(configs[BATCH_ID], apiInvoker, configs[HEARTBEAT_INTERVAL_CONFIG])
             try:
