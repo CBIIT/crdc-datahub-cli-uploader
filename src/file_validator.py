@@ -422,11 +422,11 @@ def validate_zip_file(archived_files_info, file_path, md5_cache, log):
                 if in_archive_manifest:
                     files.append(extracted_file_path)
                 else:
-                    log.error(f"File {extracted_file_path} in zip file {file_path} is not in archive manifest!")
+                    log.error(f"File {extracted_file_path} found in zip file {file_path} is not included in archive manifest!")
         if len(files) != len(archived_files_info):
             # find files in archived_files_info but not in files
             missing_files = [row.get(FILE_PATH) for row in archived_files_info if row.get(FILE_PATH) not in files]
-            invalid_reason = f"Missing files defined in archive_manifest but in zip file {file_path}: {', '.join(missing_files)}"
+            invalid_reason = f"The zip file  {file_path} is missing the following files: {', '.join(missing_files)}"
             log.error(invalid_reason)
             return False
         rtnVal = True
