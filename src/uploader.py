@@ -66,7 +66,7 @@ def controller():
     
     file_list = validator.fileList
     archive_files_info = validator.archive_files_info
-    if configs.get(DRY_RUN, False) and configs[DRY_RUN]:
+    if configs.get(DRY_RUN, False) and configs[DRY_RUN] == True:
         log.info("File validations are completed in dry run mode.")
         return 0
     if validator.invalid_count == 0:
