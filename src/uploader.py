@@ -4,7 +4,7 @@
 #############################
 import os
 from bento.common.utils import get_logger, LOG_PREFIX, get_time_stamp
-from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, \
+from common.constants import UPLOAD_TYPE, S3_BUCKET, FILE_NAME_DEFAULT, BATCH_STATUS, DRY_RUN, \
     BATCH_BUCKET, BATCH, BATCH_ID, FILE_PREFIX, TEMP_CREDENTIAL, SUCCEEDED, ERRORS, BATCH_CREATED, BATCH_UPDATED, \
     FILE_PATH, SKIPPED, TYPE_FILE, CLI_VERSION, HEARTBEAT_INTERVAL_CONFIG, PRE_MANIFEST, FILE_ID_DEFAULT, SUBFOLDER_FILE_NAME
 from common.graphql_client import APIInvoker
@@ -66,6 +66,9 @@ def controller():
     
     file_list = validator.fileList
     archive_files_info = validator.archive_files_info
+    if configs.get(DRY_RUN, False) and configs[DRY_RUN]:
+        log.info("File validations are completed in dry run mode.")
+        return 0
     if validator.invalid_count == 0:
         #step 3: create a batch
         file_array = [ item[SUBFOLDER_FILE_NAME] if item.get(SUBFOLDER_FILE_NAME) else item.get(FILE_NAME_DEFAULT) for item in file_list]
