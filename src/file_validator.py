@@ -382,14 +382,14 @@ def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived
     if file_name.endswith('.zip'):
         log.info(f"Validating contents of zip file {file_name} ...")
         if not archived_files_info:
-            invalid_reason += f"Archive manifest is not provided for zip file {file_name}!"
+            invalid_reason += f"No archive manifest found for {file_name}, content of the zip archive cannot be validated."
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
             log.error(invalid_reason)
             return False
         archive_file_info_list = [row for row in archived_files_info if row.get(ARCHIVE_NAME) == file_name]
         if not archive_file_info_list or len(archive_file_info_list) == 0:
-            invalid_reason += f"Missing archived file manifest for {file_name}!"
+            invalid_reason += f"No archive manifest found for {file_name}, content of the zip archive cannot be validated."
             file_info[SUCCEEDED] = False
             file_info[ERRORS] = [invalid_reason]
             log.error(invalid_reason)
