@@ -85,24 +85,17 @@ class S3Bucket:
         # Initialize the progress bar
         progress = create_progress_bar()
         task = progress.add_task("uploading task", total=file_size)
-        chunk_size = 1024 * 1024 if file_size >= 1024 * 1024 else file_size #chunk data for display progress for small metadata file < 4,500,000,000 bytes
-
-        uploaded_bytes = 0
+        if file_size > SINGLE_PUT_LIMIT:
+            raise Exception(f"File size {file_size} exceeds single put limit of {SINGLE_PUT_LIMIT} bytes. Use upload_file_obj instead.")
 
         try:
             with progress:
-                while uploaded_bytes < file_size:
-                    chunk = data.read(chunk_size)
-                    if not chunk:
-                        break  # Stop if there’s nothing left to read
-
-                    self.bucket.put_object(
-                        Key=key,
-                        Body=chunk,
-                        ACL=BUCKET_OWNER_ACL,
-                    )
-                    uploaded_bytes += len(chunk)  # Track uploaded bytes
-                    progress.update(task, advance=len(chunk))
+                self.bucket.put_object(
+                    Key=key,
+                    Body=data,
+                    ACL=BUCKET_OWNER_ACL,
+                )
+                progress.update(task, advance=file_size)
         finally:
             progress.stop()
 
