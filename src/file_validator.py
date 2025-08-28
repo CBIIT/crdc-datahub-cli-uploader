@@ -260,7 +260,7 @@ class FileValidator:
                         files_dict.update({key: {
                             ARCHIVE_NAME: archive_file_name,
                             FILE_PATH: file_path,
-                            FILE_SIZE_DEFAULT: file_info.get(self.configs.get(FILE_SIZE_FIELD)),
+                            FILE_SIZE_DEFAULT: file_info.get(FILE_SIZE_DEFAULT),
                             MD5_DEFAULT: file_info.get("md5")
                         }})
             files_info  =  list(files_dict.values())
