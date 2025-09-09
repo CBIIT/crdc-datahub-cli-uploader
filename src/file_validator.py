@@ -241,8 +241,9 @@ class FileValidator:
                     self.field_names = clean_up_strs(reader.fieldnames)
                 for info in reader:
                     file_info = clean_up_key_value(info)
-                    manifest_rows.append(file_info)
                     if not is_archive_manifest:
+                        # convert MD5 to lowercase
+                        file_info[self.configs.get(FILE_MD5_FIELD)] = file_info.get(self.configs.get(FILE_MD5_FIELD)).lower()
                         file_name = file_info.get(self.configs.get(FILE_NAME_FIELD))
                         file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
                         if self.has_file_id is None:
@@ -254,6 +255,8 @@ class FileValidator:
                             MD5_DEFAULT: file_info.get(self.configs.get(FILE_MD5_FIELD))
                         }})
                     else:
+                        # convert MD5 to lowercase
+                        file_info["md5"] = file_info.get("md5").lower()
                         archive_file_name = file_info.get(ARCHIVE_NAME)
                         file_path = file_info.get(FILE_PATH)
                         key = f"{archive_file_name}-{file_path}"
@@ -263,6 +266,8 @@ class FileValidator:
                             FILE_SIZE_DEFAULT: file_info.get(FILE_SIZE_DEFAULT),
                             MD5_DEFAULT: file_info.get("md5")
                         }})
+                    # save clean data to manifest_rows
+                    manifest_rows.append(file_info)
             files_info  =  list(files_dict.values())
 
         except UnicodeDecodeError as ue:
