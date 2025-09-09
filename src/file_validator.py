@@ -243,7 +243,7 @@ class FileValidator:
                     file_info = clean_up_key_value(info)
                     if not is_archive_manifest:
                         # convert MD5 to lowercase
-                        file_info[self.configs.get(FILE_MD5_FIELD)] = file_info.get(self.configs.get(FILE_MD5_FIELD)).lower()
+                        file_info[self.configs.get(FILE_MD5_FIELD)] = file_info.get(self.configs.get(FILE_MD5_FIELD), "").lower()
                         file_name = file_info.get(self.configs.get(FILE_NAME_FIELD))
                         file_id = file_info.get(self.configs.get(FILE_ID_FIELD))
                         if self.has_file_id is None:
@@ -264,7 +264,7 @@ class FileValidator:
                             ARCHIVE_NAME: archive_file_name,
                             FILE_PATH: file_path,
                             FILE_SIZE_DEFAULT: file_info.get(FILE_SIZE_DEFAULT),
-                            MD5_DEFAULT: file_info.get("md5")
+                            MD5_DEFAULT: file_info.get("md5", "").lower()
                         }})
                     # save clean data to manifest_rows
                     manifest_rows.append(file_info)
