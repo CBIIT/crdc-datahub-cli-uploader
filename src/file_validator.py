@@ -256,7 +256,7 @@ class FileValidator:
                         }})
                     else:
                         # convert MD5 to lowercase
-                        file_info["md5"] = file_info.get("md5").lower()
+                        file_info["md5"] = file_info.get("md5", "").lower()
                         archive_file_name = file_info.get(ARCHIVE_NAME)
                         file_path = file_info.get(FILE_PATH)
                         key = f"{archive_file_name}-{file_path}"
@@ -264,7 +264,7 @@ class FileValidator:
                             ARCHIVE_NAME: archive_file_name,
                             FILE_PATH: file_path,
                             FILE_SIZE_DEFAULT: file_info.get(FILE_SIZE_DEFAULT),
-                            MD5_DEFAULT: file_info.get("md5", "").lower()
+                            MD5_DEFAULT: file_info.get("md5")
                         }})
                     # save clean data to manifest_rows
                     manifest_rows.append(file_info)
