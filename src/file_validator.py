@@ -8,7 +8,7 @@ import shutil
 from common.constants import UPLOAD_TYPE, TYPE_FILE, TYPE_MATE_DATA, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, FILE_PATH, SUCCEEDED, ERRORS, FILE_ID_DEFAULT,\
     FILE_ID_FIELD, OMIT_DCF_PREFIX, FROM_S3, TEMP_DOWNLOAD_DIR, S3_START, MD5_CACHE_DIR, MD5_CACHE_FILE, MODIFIED_AT, SUBFOLDER_FILE_NAME,\
-    TEMP_UNZIP_DIR, ARCHIVE_MANIFEST, ARCHIVE_NAME, MAX_CREATE_BATCH_PAYLOAD_SIZE, SUBMISSION_ID
+    TEMP_UNZIP_DIR, ARCHIVE_MANIFEST, ARCHIVE_NAME, MAX_CREATE_BATCH_PAYLOAD_SIZE, SUBMISSION_ID, BYPASS_ARCHIVE_VALIDATION
 from common.utils import clean_up_key_value, clean_up_strs, is_valid_uuid
 from bento.common.utils import get_logger
 from common.utils import extract_s3_info_from_url, dump_data_to_csv
@@ -129,7 +129,7 @@ class FileValidator:
             converted_file_info = {FILE_ID_DEFAULT: file_id, FILE_NAME_DEFAULT: info.get(FILE_NAME_DEFAULT), FILE_PATH: file_path, FILE_SIZE_DEFAULT: size_info, MD5_DEFAULT: info[MD5_DEFAULT], SUCCEEDED: None, ERRORS: None, SUBFOLDER_FILE_NAME: info.get(SUBFOLDER_FILE_NAME)}
             self.fileList.append(converted_file_info)
             if not self.from_s3: # only  validate local data file
-                result = validate_data_file(converted_file_info, size_info, file_path, self.md5_cache, self.log, self.archive_files_info)
+                result = validate_data_file(converted_file_info, size_info, file_path, self.md5_cache, self.log, self.archive_files_info, self.configs.get(BYPASS_ARCHIVE_VALIDATION, False))
                 if result:
                     self.log.info(f'Validating file integrity succeeded on "{info[FILE_NAME_DEFAULT]}"')
                 self.log.info(f'{line_num - 1} out of {total_file_cnt} file(s) have been validated.')
@@ -353,7 +353,7 @@ Validate file size and md5
 :param log: log
 :return: True if valid, False otherwise
 """
-def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived_files_info = None):
+def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived_files_info = None, bypass_archive_validation = False):
     invalid_reason = ""
     if not os.path.isfile(file_path):
         invalid_reason += f"File {file_path} does not exist!"
@@ -384,7 +384,7 @@ def validate_data_file(file_info, size_info, file_path, md5_cache, log, archived
         return False
     # check zip file
     file_name = file_info.get(FILE_NAME_DEFAULT)
-    if file_name.endswith('.zip'):
+    if file_name.endswith('.zip') and bypass_archive_validation == False:
         log.info(f"Validating contents of zip file {file_name} ...")
         if not archived_files_info:
             invalid_reason += f"No archive manifest found for {file_name}, content of the zip archive cannot be validated."

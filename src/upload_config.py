@@ -27,6 +27,8 @@ class Config():
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
+        # Bypass archive(zip) validation, archive manifest is no longer required
+        parser.add_argument('--bypass-archive-validation', action='store_true', default=False, help='Bypass archive(zip) validation, archive manifest is no longer required')
         
         args = parser.parse_args()
         self.data = {}
