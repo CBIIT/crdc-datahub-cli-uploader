@@ -24,6 +24,7 @@ S3_BUCKET = "bucket"
 RETRIES = "retries"
 OVERWRITE = "overwrite"
 DRY_RUN = "dryrun"
+BYPASS_ARCHIVE_VALIDATION = "bypass_archive_validation"
 
 #file validation 
 FILE_INVALID_REASON = "invalid_reason"

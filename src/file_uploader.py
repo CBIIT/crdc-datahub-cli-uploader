@@ -5,7 +5,7 @@ from datetime import datetime
 from bento.common.utils import get_logger
 from common.constants import FILE_NAME_DEFAULT, SUCCEEDED, ERRORS,  OVERWRITE, DRY_RUN,\
     S3_BUCKET, TEMP_CREDENTIAL, FILE_PREFIX, RETRIES, FILE_DIR, FROM_S3, FILE_PATH,FILE_SIZE_DEFAULT, MD5_DEFAULT,\
-    SUBFOLDER_FILE_NAME, TEMP_DOWNLOAD_DIR
+    SUBFOLDER_FILE_NAME, TEMP_DOWNLOAD_DIR, BYPASS_ARCHIVE_VALIDATION
 from common.utils import extract_s3_info_from_url, format_size, format_time
 from common.s3util import S3Bucket
 from copier import Copier
@@ -189,7 +189,7 @@ class FileUploader:
         
         self.log.info(f"{file_info[FILE_NAME_DEFAULT]} has been downloaded from {self.file_dir} successfully!")
         # validate size and md5 of downloaded data file
-        result = validate_data_file(file_info, file_info.get(FILE_SIZE_DEFAULT), file_path, self.md5_cache, self.log, self.archived_files_info)
+        result = validate_data_file(file_info, file_info.get(FILE_SIZE_DEFAULT), file_path, self.md5_cache, self.log, self.archived_files_info, self.configs.get(BYPASS_ARCHIVE_VALIDATION, False))
         if result:
             self.log.info(f'Validating file integrity succeeded on "{file_info[FILE_NAME_DEFAULT]}"')
         self.log.info(f'{file_count} out of {total_file_count} file(s) have been validated.')
