@@ -474,7 +474,7 @@ def get_file_md5(file_path, md5_cache, file_size, log):
     if not cached_md5 or len(cached_md5) == 0:
          #calculate file md5
         md5sum = calculate_file_md5(file_path, file_size, log)
-        if md5_cache: 
+        if isinstance(md5_cache, list): 
             md5_cache.append({FILE_PATH: file_path, FILE_SIZE_DEFAULT: file_size, MD5_DEFAULT: md5sum, MODIFIED_AT: file_modified_at})
     else:
         md5sum = cached_md5[0]
