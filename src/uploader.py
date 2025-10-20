@@ -26,7 +26,7 @@ def controller():
     #step 1: process args, configuration file
     config = Config()
     # step 1.1: check cli version
-    if bool(config.data.get(DRY_RUN)):
+    if not bool(config.data.get(DRY_RUN)):
         result, msg = config.check_version()
         if result == 0:
             log.warning(msg)
@@ -49,7 +49,18 @@ def controller():
     apiInvoker = APIInvoker(configs)
     # get data file config and heartbeat config
     # retrieve data file configuration
-    result, data_file_config = apiInvoker.get_data_file_config(configs["submission"])
+    if bool(configs.get(DRY_RUN)):
+        result = True
+        data_file_config = {
+            'id_field': 'file_id', 
+            'name_field': 'file_name',
+            'size_field': 'file_size',
+            'md5_field': 'md5sum',
+            'omit_DCF_prefix': False,
+            'heartbeat_interval': 300
+        }
+    else:
+        result, data_file_config = apiInvoker.get_data_file_config(configs["submission"])
     if not result or not data_file_config:
         log.error("Failed to upload files: can't get data file config!")
         log.info("Failed to upload files: can't get data file config! Please check log file in tmp folder for details.")
