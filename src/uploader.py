@@ -26,14 +26,15 @@ def controller():
     #step 1: process args, configuration file
     config = Config()
     # step 1.1: check cli version
-    result, msg = config.check_version()
-    if result == 0:
-        log.warning(msg)
-    elif result == -1:
-        log.error(msg)
-        return 1
-    else:
-        log.info(msg)     
+    if bool(config.data.get(DRY_RUN)):
+        result, msg = config.check_version()
+        if result == 0:
+            log.warning(msg)
+        elif result == -1:
+            log.error(msg)
+            return 1
+        else:
+            log.info(msg)     
     # exit if if with arg -v
     if config.data.get("version"):
         return 1
