@@ -3,7 +3,7 @@ import os
 import yaml
 from common.constants import UPLOAD_TYPE, UPLOAD_TYPES, FILE_NAME_DEFAULT, FILE_SIZE_DEFAULT, MD5_DEFAULT, \
     API_URL, TOKEN, SUBMISSION_ID, FILE_DIR, FILE_MD5_FIELD, PRE_MANIFEST, FILE_NAME_FIELD, FILE_SIZE_FIELD, RETRIES, OVERWRITE, \
-    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3, HEARTBEAT_INTERVAL_CONFIG, CLI_VERSION, CURRENT_UPLOADER_VERSION_CONFIG
+    DRY_RUN, TYPE_FILE, FILE_ID_FIELD, OMIT_DCF_PREFIX, S3_START, FROM_S3, HEARTBEAT_INTERVAL_CONFIG, CLI_VERSION, ARCHIVE_MANIFEST
 from bento.common.utils import get_logger
 from common.graphql_client import APIInvoker
 from common.utils import clean_up_key_value, compare_version
@@ -27,6 +27,8 @@ class Config():
 
         #for better user experience, using configuration file to pass all args above
         parser.add_argument('-c', '--config', help='configuration file, can potentially contain all above parameters, optional')
+        # Bypass archive(zip) validation, archive manifest is no longer required
+        parser.add_argument('--bypass-archive-validation', action='store_true', default=False, help='Bypass archive(zip) validation, archive manifest is no longer required')
         
         args = parser.parse_args()
         self.data = {}
@@ -91,7 +93,7 @@ class Config():
 
         dry_run = self.data.get(DRY_RUN, False) #default value is False
         if isinstance(dry_run, str):
-            dry_run = True if overwrite.lower() == "true" else False
+            dry_run = True if str(dry_run).lower() == "true" else False
             self.data[DRY_RUN] = dry_run
 
         type = self.data.get(UPLOAD_TYPE)
@@ -116,7 +118,7 @@ class Config():
                         return False
 
                 self.data[PRE_MANIFEST]  = manifest
-        
+    
         filepath = self.data.get(FILE_DIR)
         if filepath is None:
             self.log.critical(f'Please provide “data” (path to data files) in configuration file or command line argument.')

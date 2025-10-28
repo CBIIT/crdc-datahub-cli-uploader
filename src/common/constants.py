@@ -24,6 +24,7 @@ S3_BUCKET = "bucket"
 RETRIES = "retries"
 OVERWRITE = "overwrite"
 DRY_RUN = "dryrun"
+BYPASS_ARCHIVE_VALIDATION = "bypass_archive_validation"
 
 #file validation 
 FILE_INVALID_REASON = "invalid_reason"
@@ -53,7 +54,7 @@ S3_START= "s3://"
 FROM_S3 = "from_s3"
 TEMP_DOWNLOAD_DIR = "tmp/download"
 
-CLI_VERSION = "4.1"
+CLI_VERSION = "4.2"
 MD5_CACHE_DIR = "tmp/md5"
 MD5_CACHE_FILE = "md5_cache.csv"
 MODIFIED_AT = "modifiedAt"
@@ -61,5 +62,12 @@ HEARTBEAT_INTERVAL_CONFIG = "heartbeat_interval"
 CURRENT_UPLOADER_VERSION_CONFIG = "current_uploader_version"
 SUBFOLDER_FILE_NAME = "internal_file_name"
 SEPARATOR_CHAR = '\t'
+
+TEMP_UNZIP_DIR = "tmp/unzip"
+ARCHIVE_MANIFEST = "archive_manifest"
+ARCHIVE_NAME = "archive_name"
+MAX_CREATE_BATCH_PAYLOAD_SIZE = 1024 * 1024 * 5  # 5MB. The create batch payload size is half to 75% of updated batch size.
+MAX_UPDATE_BATCH_PAYLOAD_SIZE = 1024 * 1024 * 10  # 10MB
 TEMP_TOKEN_DURATION = "temp_token_duration"
 TEMP_TOKEN_EXPIRATION = "expiration"
+
