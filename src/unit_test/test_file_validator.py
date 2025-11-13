@@ -157,18 +157,18 @@ class TestValidateFileName(unittest.TestCase):
         self.assertIn("contains invalid characters", error_msg)
 
     def test_validate_file_name_valid_special_characters(self):
-        """Test validation passes for valid special and non-ASCII characters (-, _, .)"""
+        """Test validation passes for valid special characters (-, _, .)"""
         self.validator.manifest_rows = [
             {'file_name': 'file-name_v1.0.txt', 'md5sum': 'abc123'},
             {'file_name': 'data_2024-01-01.csv', 'md5sum': 'def456'},
-            {'file_name': 'report.finalâ¯PM.pdf', 'md5sum': 'ghi789'},
+            {'file_name': 'report.final.pdf', 'md5sum': 'ghi789'},
         ]
         self.validator.configs[FILE_NAME_FIELD] = 'file_name'
         self.validator.configs[FILE_MD5_FIELD] = 'md5sum'
         
         result = self.validator.validate_file_name()
         
-        self.assertTrue(result, "Should pass for file names with valid special and non-ASCII characters")
+        self.assertTrue(result, "Should pass for file names with valid special characters")
 
     def test_validate_file_name_with_forward_slash_in_name(self):
         """Test validation passes for file names with forward slashes (paths)"""
@@ -216,16 +216,17 @@ class TestValidateFileName(unittest.TestCase):
         self.assertEqual(self.validator.log.error.call_count, 3)
 
     def test_validate_file_name_unicode_characters(self):
-        """Test validation passes for file names with unicode characters"""
+        """Test validation passes for file names with unicode and non-ASCII characters"""
         self.validator.manifest_rows = [
-            {'file_name': 'αρχείο.txt', 'md5sum': 'ghi789'}
+            {'file_name': 'αρχείο.txt', 'md5sum': 'ghi789'},
+            {'file_name': '.txt', 'md5sum': 'ghi789'}
         ]
         self.validator.configs[FILE_NAME_FIELD] = 'file_name'
         self.validator.configs[FILE_MD5_FIELD] = 'md5sum'
         
         result = self.validator.validate_file_name()
         
-        self.assertTrue(result, "Should pass for file names with unicode characters")
+        self.assertTrue(result, "Should pass for file names with unicode and non-ASCII characters")
 
     def test_validate_file_name_long_filename(self):
         """Test validation passes for very long file names"""
