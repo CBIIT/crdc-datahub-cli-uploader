@@ -169,9 +169,6 @@ class TestValidateFileName(unittest.TestCase):
         result = self.validator.validate_file_name()
         
         self.assertTrue(result, "Should pass for file names with valid special and non-ASCII characters")
-    
-    #
-    
 
     def test_validate_file_name_with_forward_slash_in_name(self):
         """Test validation passes for file names with forward slashes (paths)"""
