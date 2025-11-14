@@ -229,7 +229,7 @@ class FileValidator:
             if not os.path.isfile(pre_manifest):
                 self.log.critical(f'Manifest file {pre_manifest} does not exist!')
                 return [], []
-            with open(pre_manifest, mode='r', encoding='cp1252') as pre_m:
+            with open(pre_manifest, mode='r', encoding='utf-8') as pre_m:
                 reader = csv.DictReader(pre_m, delimiter='\t')
                 if not self.field_names:
                     self.field_names = clean_up_strs(reader.fieldnames)
