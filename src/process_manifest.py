@@ -20,11 +20,9 @@ def _is_valid_file_id_value(id_value, configs):
     if not id_value:
         return False
     if configs.get(OMIT_DCF_PREFIX) is False:
-        if not id_value.startswith("dg.4DFC/"):
+        if not id_value.startswith(DCF_PREFIX):
             return False
         parts = id_value.split("/", 1)
-        if len(parts) < 2:
-            return False
         return is_valid_uuid(parts[1])
     return is_valid_uuid(id_value)
 
@@ -190,7 +188,7 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
                                         id_label = configs.get(FILE_ID_FIELD, "file_id")
                                         row_errors.append(
                                             f'Child template {os.path.basename(file)} row {int(index) + 2}: '
-                                            f'"{modified_file_name}" is not a valid file in the manifest or '
+                                            f'"{fileName}" is not a valid file in the manifest or '
                                             f'a valid "{id_label}".'
                                         )
                         if row_errors:
