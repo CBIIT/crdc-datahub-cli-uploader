@@ -19,7 +19,7 @@ def _is_valid_file_id_value(id_value, configs):
     id_value = id_value.strip()
     if not id_value:
         return False
-    if configs.get(OMIT_DCF_PREFIX) is False:
+    if configs.get(OMIT_DCF_PREFIX, False) is False:
         if not id_value.startswith(DCF_PREFIX):
             return False
         parts = id_value.split("/", 1)

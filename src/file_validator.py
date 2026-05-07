@@ -315,7 +315,7 @@ class FileValidator:
     def validate_file_id(self, id, line_num):
         id_field_name = self.configs.get(FILE_ID_FIELD)
         if id:
-            if self.configs[OMIT_DCF_PREFIX] == False:
+            if self.configs.get(OMIT_DCF_PREFIX, False) is False:
                 msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like "dg.4DFC/e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
                 if not id.startswith("dg.4DFC/"):
                     # self.log.error(msg)
