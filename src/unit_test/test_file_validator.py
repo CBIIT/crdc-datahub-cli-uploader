@@ -248,7 +248,7 @@ class TestValidateFileName:
 
     def test_validate_file_name_long_filename(self, validator):
         """Test validation passes for very long file names"""
-        long_name = 'a' * 255 + '.txt'
+        long_name = 'a' * 251 + '.txt'
         validator.manifest_rows = [
             {'file_name': long_name, 'md5sum': 'abc123'},
         ]

@@ -195,9 +195,14 @@ class FileValidator:
                 is_valid = False
                 self.log.error(msg)
 
-            # check if file name contains reserved or illegal characters *, and |
-            if re.search(r'[*|]', file_name):
+            # check if file name contains reserved or illegal characters *, :, and |
+            if re.search(r'[*:|]', file_name):
                 msg = f"Line {line_num}: File name {file_name} contains invalid characters!"
+                is_valid = False
+                self.log.error(msg)
+
+            if len(file_name) > 255:
+                msg = f"Line {line_num}: File name {file_name} is too long!"
                 is_valid = False
                 self.log.error(msg)
 
@@ -310,7 +315,7 @@ class FileValidator:
     def validate_file_id(self, id, line_num):
         id_field_name = self.configs.get(FILE_ID_FIELD)
         if id:
-            if self.configs[OMIT_DCF_PREFIX] == False:
+            if self.configs.get(OMIT_DCF_PREFIX, False) is False:
                 msg = f'Line {line_num}: "{id_field_name}": "{id}" is not in correct format. A correct "{id_field_name}" should look like "dg.4DFC/e041576e-3595-5c8b-b0b3-272bc7cb6aa8". You can provide correct "{id_field_name}" or remove the column and let the system generate it for you.'
                 if not id.startswith("dg.4DFC/"):
                     # self.log.error(msg)

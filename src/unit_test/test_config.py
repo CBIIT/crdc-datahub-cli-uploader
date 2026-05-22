@@ -1,6 +1,8 @@
 import os
+import sys
 import yaml
 import pytest
+from unittest.mock import patch
 from bento.common.utils import get_logger
 from upload_config import Config
 
@@ -20,16 +22,18 @@ class TestConfig:
 
     def test_validate_configs_empty(self):
         """Test that empty config validation fails"""
-        config = Config()
-        config.data = {}
-        result = config.validate()
-        assert not result, "Empty config should return False"
+        with patch.object(sys, 'argv', ['uploader']):
+            config = Config()
+            config.data = {}
+            result = config.validate()
+            assert not result, "Empty config should return False"
 
     def test_validate_configs_valid(self, config_data):
         """Test that valid config passes validation"""
         if config_data is None:
             pytest.skip("Test config file not found")
-        config = Config()
-        config.data = config_data
-        result = config.validate()
-        assert result, "Config with all valid values should return True"
+        with patch.object(sys, 'argv', ['uploader']):
+            config = Config()
+            config.data = config_data
+            result = config.validate()
+            assert result, "Config with all valid values should return True"

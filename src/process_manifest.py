@@ -6,10 +6,26 @@ from common.constants import FILE_ID_DEFAULT, FILE_NAME_FIELD, BATCH_BUCKET, S3_
 from common.graphql_client import APIInvoker
 from copier import Copier
 from common.s3util import S3Bucket
+from common.utils import is_valid_uuid
 
 SEPARATOR_CHAR = '\t'
 UTF8_ENCODE ='utf8'
 NODE_TYPE_NAME = 'type'
+
+def _is_valid_file_id_value(id_value, configs):
+    """True if id_value matches file id format (same rules as FileValidator.validate_file_id)."""
+    if not id_value or not isinstance(id_value, str):
+        return False
+    id_value = id_value.strip()
+    if not id_value:
+        return False
+    if configs.get(OMIT_DCF_PREFIX, False) is False:
+        if not id_value.startswith(DCF_PREFIX):
+            return False
+        parts = id_value.split("/", 1)
+        return is_valid_uuid(parts[1])
+    return is_valid_uuid(id_value)
+
 def process_manifest_file(log, configs, has_file_id, file_infos, manifest_rows, manifest_s3_url):
     """
     function: process_manifest_file
@@ -148,6 +164,7 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
             if len(children_files) > 0:
                 for file in children_files:
                     inserted = False
+                    row_errors = []
                     # read tsv file to dataframe
                     df = pd.read_csv(file, sep=SEPARATOR_CHAR, header=0, dtype='str', encoding=UTF8_ENCODE,keep_default_na=False,na_values=[''])
                     if file_id_to_check in df.columns:
@@ -161,7 +178,26 @@ def insert_file_id_2_children(log, configs, manifest_rows, final_file_path_list,
                                     file_id = file_info[configs[FILE_ID_FIELD]]
                                     df.at[index, file_id_to_check] = file_id
                                     inserted = True
-                        if inserted:
+                                else:
+                                    # Not matched by internal_file_name; allow if the cell is already a valid file id
+                                    # (check fileName too — dg.4DFC/... is altered by replace("/", "_") for lookup)
+                                    cell = fileName.strip() if fileName else ""
+                                    if _is_valid_file_id_value(modified_file_name, configs) or _is_valid_file_id_value(cell, configs):
+                                        inserted = True
+                                    else:
+                                        id_label = configs.get(FILE_ID_FIELD, "file_id")
+                                        row_errors.append(
+                                            f'Child template {os.path.basename(file)} row {int(index) + 2}: '
+                                            f'"{fileName}" is not a valid file in the manifest or '
+                                            f'a valid "{id_label}".'
+                                        )
+                        if row_errors:
+                            for msg in row_errors:
+                                log.error(msg)
+                            # remove the file if in temp dir
+                            if is_s3:
+                                os.remove(file)
+                        elif inserted:
                             file_ext = '.tsv' if file.endswith('.tsv') else '.txt'
                             final_file_path = file.replace(file_ext, f'-final{file_ext}')
                             df.to_csv(final_file_path, sep ='\t', index=False)
