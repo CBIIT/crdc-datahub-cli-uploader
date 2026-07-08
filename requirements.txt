@@ -5,3 +5,4 @@ requests_aws4auth
 rich
 pandas
 pytest
+prefect

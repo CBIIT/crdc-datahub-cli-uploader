@@ -1,0 +1,50 @@
+# Welcome to your prefect.yaml file! You can use this file for storing and managing
+# configuration for deploying your flows. We recommend committing this file to source
+# control along with your flow code.
+
+# Generic metadata about this project
+name: CRDC Data Hub CLI Uploader
+prefect-version: null
+
+# build section allows you to manage and build docker images
+build: null
+
+# push section allows you to manage if and how this project is uploaded to remote locations
+push: null
+
+# pull section allows you to provide instructions for cloning this project in remote locations
+pull:
+  - prefect.deployments.steps.git_clone:
+      id: clone-step
+      repository: https://github.com/CBIIT/crdc-datahub-cli-uploader.git
+      branch: gc_prefect
+      include_submodules: True
+  - prefect.deployments.steps.pip_install_requirements:
+      requirements_file: requirements.txt
+      directory: "{{ clone-step.directory }}"
+      stream_output: False
+
+deployments:
+  - name: gc-cli-uploader
+    version: null
+    tags: []
+    description: null
+    schedule: {}
+    flow_name: null
+    entrypoint:  prefect_uploader.py:prefect_uploader
+    parameters:
+      submission: ""
+      api_url: ""
+      token: ""
+      type: "data file"
+      data: ""
+      manifest: ""
+      retries: 3
+      overwrite: false
+      dryrun: false
+    work_pool:
+        name: cds-curation-ecs
+        work_queue_name: cds-curation-queue
+        job_variables:
+          env:
+            PREFECT_LOGGING_EXTRA_LOGGERS: "Neo4j Summary Generator, S3 Bucket, Bento Config"

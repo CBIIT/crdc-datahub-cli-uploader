@@ -20,11 +20,11 @@ if LOG_PREFIX not in os.environ:
 
 log = get_logger('FileLoader')
 # public function to received args and dispatch to different modules for different uploading types, file or metadata
-def controller(): 
+def controller(config_file=None): 
     # print cli version
     print(f"v{CLI_VERSION}") 
     #step 1: process args, configuration file
-    config = Config()
+    config = Config(config_file)
     # step 1.1: check cli version
     result, msg = config.check_version()
     if result == 0:

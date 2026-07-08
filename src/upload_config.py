@@ -9,7 +9,7 @@ from common.graphql_client import APIInvoker
 from common.utils import clean_up_key_value, compare_version
 CLI_VERSION_API = "https://hub.datacommons.cancer.gov/api/graphql"
 class Config():
-    def __init__(self):
+    def __init__(self, config_file=None):
         self.log = get_logger('Upload Config')
         parser = argparse.ArgumentParser(description='Upload files to AWS s3 bucket')
         parser.add_argument('-v', '--version', action='store_true', help='Show version and continue')
@@ -32,6 +32,8 @@ class Config():
         
         args = parser.parse_args()
         self.data = {}
+        if config_file:
+            args.config = config_file
         if args.config:
             if not os.path.isfile(args.config.strip()):
                 self.log.critical(f'Configuration file “{args.config}” is not readable. Please make sure the path is correct and the file is readable.')

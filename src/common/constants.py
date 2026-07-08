@@ -52,7 +52,8 @@ SESSION_TOKEN = "sessionToken"
 
 S3_START= "s3://"
 FROM_S3 = "from_s3"
-TEMP_DOWNLOAD_DIR = "tmp/download"
+#TEMP_DOWNLOAD_DIR = "tmp/download"
+TEMP_DOWNLOAD_DIR = "/usr/local/data/download" # For GC only, since the efs is mounted at /usr/local/data/
 
 CLI_VERSION = "4.3"
 MD5_CACHE_DIR = "tmp/md5"
@@ -72,3 +73,5 @@ TEMP_TOKEN_DURATION = "temp_token_duration"
 TEMP_TOKEN_EXPIRATION = "expiration"
 MAX_DELETE_RETRY = 2
 
+TEMP_CONFIG_FILE = "tmp/config.yaml"
+EFS_TEMP_DOWNLOAD_DIR = "/usr/local/data/download"
