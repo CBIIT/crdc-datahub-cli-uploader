@@ -31,7 +31,7 @@ deployments:
     description: null
     schedule: {}
     flow_name: null
-    entrypoint:  prefect_uploader.py:prefect_uploader
+    entrypoint:  src/prefect_uploader.py:prefect_uploader
     parameters:
       submission: ""
       api_url: ""
