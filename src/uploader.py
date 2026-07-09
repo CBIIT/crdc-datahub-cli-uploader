@@ -157,10 +157,10 @@ def controller(config_file=None):
         file_list = [ {i:a[i] for i in a if i!=FILE_PATH} for a in file_list]
         dump_dict_to_tsv(file_list, file_path)
         log.info(f"Uploading report is created at {file_path}!")
-        dest_s3_folder = os.path.dirname(configs[PRE_MANIFEST])
+        dest_s3_folder = os.path.dirname(s3_manifest_url)
         dest_s3_file_name = os.path.basename(file_path)
         dest_s3_path = os.path.join(dest_s3_folder, dest_s3_file_name)
-        log.info(f"Uploading report is uploaded to s3 bucket: {dest_s3_path}!")
+        log.info(f"Uploading report to s3 bucket: {dest_s3_path}!")
         upload_log_file(dest_s3_path, file_path)
     except Exception as e:
         log.exception(f"Failed to dump uploading report files: {get_exception_msg()}.")
