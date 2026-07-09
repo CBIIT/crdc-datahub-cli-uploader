@@ -14,7 +14,7 @@ log = get_logger('FileLoader')
 def prefect_uploader(submission: str, api_url: str, token: str, type: str, data: str, manifest: str,retries: int, overwrite: bool, dryrun: bool):
     try:
         # print cli version
-        print(f"v{CLI_VERSION}")
+        log.info(f"v{CLI_VERSION}")
         # download pre-manifest file from the s3 bucket
         configs = {}
         configs["Config"] = {PRE_MANIFEST: manifest, SUBMISSION_ID: submission, API_URL: api_url, FILE_DIR: data, TOKEN: token, UPLOAD_TYPE: type, DRY_RUN: dryrun, RETRIES: retries, OVERWRITE: overwrite}
@@ -31,7 +31,7 @@ def prefect_uploader(submission: str, api_url: str, token: str, type: str, data:
         # delete the temp config file
         if os.path.exists(TEMP_CONFIG_FILE):
             os.remove(TEMP_CONFIG_FILE)
-            print(f"Deleted the temp config file: {TEMP_CONFIG_FILE}")
+            log.info(f"Deleted the temp config file: {TEMP_CONFIG_FILE}")
     
 if __name__ == "__main__":
     prefect_uploader()
