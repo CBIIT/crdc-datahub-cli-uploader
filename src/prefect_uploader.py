@@ -16,7 +16,8 @@ def prefect_uploader(submission: str, api_url: str, token: str, type: str, data:
         # print cli version
         print(f"v{CLI_VERSION}")
         # download pre-manifest file from the s3 bucket
-        configs = {PRE_MANIFEST: manifest, SUBMISSION_ID: submission, API_URL: api_url, FILE_DIR: data, TOKEN: token, UPLOAD_TYPE: type, DRY_RUN: dryrun, RETRIES: retries, OVERWRITE: overwrite}
+        configs = {}
+        configs["Config"] = {PRE_MANIFEST: manifest, SUBMISSION_ID: submission, API_URL: api_url, FILE_DIR: data, TOKEN: token, UPLOAD_TYPE: type, DRY_RUN: dryrun, RETRIES: retries, OVERWRITE: overwrite}
         # save the configs to the temp config file
         with open(TEMP_CONFIG_FILE, 'w') as f:
             yaml.dump(configs, f)
