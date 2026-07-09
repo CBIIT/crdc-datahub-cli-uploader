@@ -10,7 +10,7 @@ if LOG_PREFIX not in os.environ:
     os.environ[LOG_PREFIX] = 'Uploader Main'
 log = get_logger('FileLoader')
 
-@flow(name="prefect_cli_uploader")
+@flow(name="prefect_cli_uploader", log_prints=True)
 def prefect_uploader(submission: str, api_url: str, token: str, type: str, data: str, manifest: str,retries: int, overwrite: bool, dryrun: bool):
     try:
         # print cli version
