@@ -47,4 +47,4 @@ deployments:
         work_queue_name: cds-curation-queue
         job_variables:
           env:
-            PREFECT_LOGGING_EXTRA_LOGGERS: "Neo4j Summary Generator, S3 Bucket, Bento Config"
+            PREFECT_LOGGING_EXTRA_LOGGERS: "Uploader Main"
