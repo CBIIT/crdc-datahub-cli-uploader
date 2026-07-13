@@ -216,9 +216,18 @@ class S3Bucket:
         self.parts = []
         part_size = self.calculate_part_size(size)
         try:
+            # refresh token to avoid temp credential expired error before uploading
+            self.refreshToken()
             self.initiate_multipart_upload(key)
             total_parts = math.ceil(size / part_size)
+            # record uploading time
+            uploading_time = time.time()
+            self.refreshToken()
             for part_number in range(1, total_parts + 1):
+                # if uploading time is greater than 30 minutes, refresh token
+                if time.time() - uploading_time > 1800:
+                    self.refreshToken()
+                    uploading_time = time.time()
                 data = fileobj.read(part_size)
                 if not data:
                     break
