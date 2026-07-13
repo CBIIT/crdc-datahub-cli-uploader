@@ -47,4 +47,4 @@ deployments:
         work_queue_name: default
         job_variables:
           env:
-            PREFECT_LOGGING_EXTRA_LOGGERS: "Uploader Main, FileLoader, File_Validator, S3 Bucket"
+            PREFECT_LOGGING_EXTRA_LOGGERS: "Uploader Main, FileLoader, File_Validator, S3 Bucket, File_Uploader, GraphQL API"
